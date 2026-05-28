@@ -33,11 +33,11 @@ const rotas = createBrowserRouter([
           { path: 'sobre', element: <Sobre /> },
           { path: 'login', element: <Login /> },
           { path: 'cadastro', element: <Cadastro /> },
-          //{ path: 'login-admin', element: <LoginAdmin /> },
+          { path: 'login-admin', element: <LoginAdmin /> }, 
         ],
       },
       {
-        // path: '/admin',
+        path: '/admin',
         element: <AdminLayout />, // 👈 layout admin
         children: [
           { index: true, element: <Admin /> },

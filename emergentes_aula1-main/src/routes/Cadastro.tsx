@@ -51,6 +51,7 @@ function SenhaChecklist({ senha }: { senha: string }) {
               </svg>
             )}
           </span>
+
           <span
             className={`transition-colors ${
               req.valido ? "text-green-600" : "text-gray-500"
@@ -71,6 +72,7 @@ export default function Cadastro() {
     watch,
     formState: { errors, touchedFields, dirtyFields },
   } = useForm<Inputs>({ mode: "onBlur" });
+
   const navigate = useNavigate();
   const [senhaFocada, setSenhaFocada] = useState(false);
 
@@ -80,48 +82,67 @@ export default function Cadastro() {
   const telefone = watch("telefone", "");
   const cpf = watch("cpf", "");
 
-  // Validação simples de CPF (formato e dígitos)
+  // Validação simples de CPF
   function validaCPF(cpf: string) {
     cpf = cpf.replace(/\D/g, "");
+
     if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
-    let soma = 0,
-      resto;
-    for (let i = 1; i <= 9; i++)
+
+    let soma = 0;
+    let resto;
+
+    for (let i = 1; i <= 9; i++) {
       soma += parseInt(cpf.substring(i - 1, i)) * (11 - i);
+    }
+
     resto = (soma * 10) % 11;
+
     if (resto === 10 || resto === 11) resto = 0;
+
     if (resto !== parseInt(cpf.substring(9, 10))) return false;
+
     soma = 0;
-    for (let i = 1; i <= 10; i++)
+
+    for (let i = 1; i <= 10; i++) {
       soma += parseInt(cpf.substring(i - 1, i)) * (12 - i);
+    }
+
     resto = (soma * 10) % 11;
+
     if (resto === 10 || resto === 11) resto = 0;
+
     if (resto !== parseInt(cpf.substring(10, 11))) return false;
+
     return true;
   }
 
-  // Função para determinar a classe da borda do input
+  // Classe dinâmica dos inputs
   const getInputClass = (fieldName: keyof Inputs, isValid: boolean) => {
     const baseClass =
       "bg-gray-50 text-gray-900 sm:text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 transition-colors";
+
     const touched = touchedFields[fieldName] || dirtyFields[fieldName];
 
     if (!touched) {
       return `${baseClass} border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500`;
     }
+
     if (isValid) {
       return `${baseClass} border-2 border-green-500 focus:ring-green-500 focus:border-green-500`;
     }
+
     return `${baseClass} border-2 border-red-500 focus:ring-red-500 focus:border-red-500`;
   };
 
-  // Validações individuais
+  // Validações
   const nomeValido = nome.length >= 10;
+
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
   const telefoneValido = telefone.length >= 8;
+
   const cpfValido = validaCPF(cpf);
 
-  // Valida se a senha atende todos os requisitos
   const senhaValida =
     senha.length >= 8 &&
     /[A-Z]/.test(senha) &&
@@ -138,7 +159,9 @@ export default function Cadastro() {
     try {
       const response = await fetch(`${apiUrl}/clientes/cadastro`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
 
@@ -149,6 +172,7 @@ export default function Cadastro() {
             duration: 5000,
           }
         );
+
         setTimeout(() => {
           navigate("/login");
         }, 5000);
@@ -174,23 +198,29 @@ export default function Cadastro() {
             className="space-y-4 md:space-y-6"
             onSubmit={handleSubmit(onSubmit)}
           >
+            {/* Nome */}
             <div>
               <label
                 htmlFor="nome"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Nome completo
+                Nome completo <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="text"
                 id="nome"
                 placeholder="Ex: João Silva Santos"
                 {...register("nome", {
                   required: "Nome é obrigatório",
-                  minLength: { value: 10, message: "Mínimo 10 caracteres" },
+                  minLength: {
+                    value: 10,
+                    message: "Mínimo 10 caracteres",
+                  },
                 })}
                 className={getInputClass("nome", nomeValido)}
               />
+
               {errors.nome && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.nome.message}
@@ -198,17 +228,19 @@ export default function Cadastro() {
               )}
             </div>
 
+            {/* Email */}
             <div>
               <label
                 htmlFor="email"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                E-mail
+                E-mail <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="email"
                 id="email"
-                placeholder="Ex: joao.silva@email.com"
+                placeholder="Ex: joao@email.com"
                 {...register("email", {
                   required: "E-mail é obrigatório",
                   pattern: {
@@ -218,6 +250,7 @@ export default function Cadastro() {
                 })}
                 className={getInputClass("email", emailValido)}
               />
+
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.email.message}
@@ -225,23 +258,29 @@ export default function Cadastro() {
               )}
             </div>
 
+            {/* Telefone */}
             <div>
               <label
                 htmlFor="telefone"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Telefone
+                Telefone <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="tel"
                 id="telefone"
                 placeholder="Ex: (53) 99999-9999"
                 {...register("telefone", {
                   required: "Telefone é obrigatório",
-                  minLength: { value: 8, message: "Mínimo 8 dígitos" },
+                  minLength: {
+                    value: 8,
+                    message: "Mínimo 8 dígitos",
+                  },
                 })}
                 className={getInputClass("telefone", telefoneValido)}
               />
+
               {errors.telefone && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.telefone.message}
@@ -249,13 +288,15 @@ export default function Cadastro() {
               )}
             </div>
 
+            {/* CPF */}
             <div>
               <label
                 htmlFor="cpf"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                CPF
+                CPF <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="text"
                 id="cpf"
@@ -268,6 +309,7 @@ export default function Cadastro() {
                 className={getInputClass("cpf", cpfValido)}
                 maxLength={14}
               />
+
               {errors.cpf && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.cpf.message}
@@ -275,33 +317,44 @@ export default function Cadastro() {
               )}
             </div>
 
+            {/* Senha */}
             <div>
               <label
                 htmlFor="senha"
                 className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
               >
-                Senha
+                Senha <span className="text-red-500">*</span>
               </label>
+
               <input
                 type="password"
                 id="senha"
                 placeholder="Digite uma senha forte"
-                {...register("senha", { required: "Senha é obrigatória" })}
+                {...register("senha", {
+                  required: "Senha é obrigatória",
+                })}
                 onFocus={() => setSenhaFocada(true)}
                 className={getInputClass("senha", senhaValida)}
               />
+
               {errors.senha && (
                 <p className="text-red-500 text-sm mt-1">
                   {errors.senha.message}
                 </p>
               )}
 
-              {/* Checklist de requisitos da senha */}
               {(senhaFocada || senha.length > 0) && (
                 <SenhaChecklist senha={senha} />
               )}
             </div>
 
+            {/* Aviso */}
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-red-500">*</span> Todos os campos são
+              obrigatórios
+            </p>
+
+            {/* Botão */}
             <button
               type="submit"
               disabled={!senhaValida}
@@ -314,6 +367,7 @@ export default function Cadastro() {
               Cadastrar
             </button>
 
+            {/* Login */}
             <p className="text-sm text-center text-gray-500 dark:text-gray-400">
               Já tem uma conta?{" "}
               <a
