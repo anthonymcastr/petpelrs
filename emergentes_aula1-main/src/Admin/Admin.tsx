@@ -8,7 +8,7 @@ export default function Admin() {
   useEffect(() => {
     async function fetchDados() {
       try {
-        const res = await axios.get("https://emergentes-aula1-main-vb57.vercel.app/animais/animais/resumo");
+        const res = await axios.get("https://emergentes-aula1-main-6evg.vercel.app/animais/animais/resumo");
         setDados(res.data);
       } catch (err) {
         console.error("Erro ao buscar dados do gráfico:", err);
