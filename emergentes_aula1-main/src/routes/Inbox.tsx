@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useClienteStore } from "../context/ClienteContext";
 import ChatJanela from "../components/ChatJanela";
-import ConversaLista from "../components/ConversaLista";
-
-/* =======================
-   TIPOS
-======================= */
 
 export type Mensagem = {
   id: number;
@@ -14,6 +9,8 @@ export type Mensagem = {
   animalId: number;
   remetenteId: number;
   destinatarioId: number;
+  codigoConversa?: string;
+
   animal: any;
   remetente: any;
   destinatario: any;
@@ -21,142 +18,190 @@ export type Mensagem = {
 
 export type Conversa = {
   animal: any;
-  outroUsuario: any; // o outro participante da conversa
+  outroUsuario: any;
   mensagens: Mensagem[];
+  codigoConversa?: string;
 };
 
 export default function Inbox() {
   const { cliente } = useClienteStore();
+  const isAdmin = cliente?.role === "admin";
 
-  // ⚠️ AQUI estava um dos problemas: não use any[]
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [conversaSelecionada, setConversaSelecionada] = useState<string | null>(
-    null
-  );
+  const [conversaSelecionada, setConversaSelecionada] = useState<string | null>(null);
 
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  // 🔐 ADMIN
+  const [codigoInput, setCodigoInput] = useState("");
+  const [liberada, setLiberada] = useState(false);
 
+  const pollingRef = useRef<number | null>(null);
+
+  // =========================
+  // BUSCAR MENSAGENS
+  // =========================
   async function carregarMensagens() {
     if (!cliente?.id) return;
 
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/contatos/inbox/${
-          cliente.id
-        }?tipo=cliente`
-      );
+    const res = await fetch(
+      `${import.meta.env.VITE_API_URL}/contatos/inbox/${cliente.id}`
+    );
 
-      const data: Mensagem[] = await res.json();
-      if (!Array.isArray(data)) return;
+    const data: Mensagem[] = await res.json();
+    if (!Array.isArray(data)) return;
 
-      // 🔒 evita duplicação no polling
-      setMensagens((prev) => {
-        const mapa = new Map<number, Mensagem>();
-
-        [...prev, ...data].forEach((msg) => {
-          mapa.set(msg.id, msg);
-        });
-
-        return Array.from(mapa.values()).sort(
-          (a, b) =>
-            new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
-        );
-      });
-    } catch (error) {
-      console.error("Erro ao carregar inbox:", error);
-    }
+    setMensagens(data);
   }
 
   useEffect(() => {
     if (!cliente?.id) return;
 
-    carregarMensagens(); // carga inicial
-    pollingRef.current = setInterval(carregarMensagens, 5000);
+    carregarMensagens();
+    pollingRef.current = setInterval(carregarMensagens, 4000);
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, [cliente?.id]);
 
-  /* =======================
-     AGRUPA POR CONVERSA
-     (ANIMAL + OUTRO USUÁRIO)
-  ======================= */
+  // =========================
+  // AGRUPAR CONVERSAS
+  // =========================
+  const conversas: Record<string, Conversa> = mensagens.reduce((acc, msg) => {
+    if (!msg.animal || !msg.remetente || !msg.destinatario) return acc;
 
-  const conversas: Record<string, Conversa> = mensagens.reduce(
-    (acc: Record<string, Conversa>, msg: Mensagem) => {
-      if (!msg.animal || !msg.remetente || !msg.destinatario) return acc;
+    const outro =
+      msg.remetenteId === cliente?.id ? msg.destinatario : msg.remetente;
 
-      // Determina quem é o "outro" na conversa
-      const outroUsuario =
-        msg.remetenteId === cliente?.id ? msg.destinatario : msg.remetente;
+    const chave = `${msg.animal.id}-${outro.id}`;
 
-      const chave = `${msg.animal.id}-${outroUsuario.id}`;
+    if (!acc[chave]) {
+      acc[chave] = {
+        animal: msg.animal,
+        outroUsuario: outro,
+        mensagens: [],
+        codigoConversa: msg.codigoConversa,
+      };
+    }
 
-      if (!acc[chave]) {
-        acc[chave] = {
-          animal: msg.animal,
-          outroUsuario,
-          mensagens: [],
-        };
-      }
+    acc[chave].mensagens.push(msg);
+    return acc;
+  }, {} as Record<string, Conversa>);
 
-      acc[chave].mensagens.push(msg);
-      return acc;
-    },
-    {}
-  );
-
-  // 🔁 ordena mensagens internas de cada conversa
-  Object.values(conversas).forEach((conversa) => {
-    conversa.mensagens.sort(
-      (a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
+  Object.values(conversas).forEach((c) => {
+    c.mensagens.sort(
+      (a, b) =>
+        new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
     );
   });
 
-  // 🧹 se a conversa selecionada sumir, limpa
-  useEffect(() => {
-    if (conversaSelecionada && !conversas[conversaSelecionada]) {
-      setConversaSelecionada(null);
-    }
-  }, [conversas, conversaSelecionada]);
+  const conversaAtual =
+    conversaSelecionada ? conversas[conversaSelecionada] : null;
 
-  // ✅ Marca mensagens como lidas ao selecionar conversa
-  async function handleSelectConversa(chave: string) {
-    setConversaSelecionada(chave);
+  // =========================
+  // ADMIN: VALIDAR CÓDIGO
+  // =========================
+  function validarCodigo() {
+    if (!conversaAtual) return;
 
-    const conversa = conversas[chave];
-    if (!conversa || !cliente?.id) return;
-
-    try {
-      await fetch(`${import.meta.env.VITE_API_URL}/contatos/marcar-lidas`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          usuarioId: cliente.id,
-          animalId: conversa.animal.id,
-          outroUsuarioId: conversa.outroUsuario.id,
-        }),
-      });
-    } catch (err) {
-      console.error("Erro ao marcar mensagens como lidas:", err);
+    if (codigoInput === conversaAtual.codigoConversa) {
+      setLiberada(true);
+    } else {
+      alert("Código inválido");
     }
   }
 
+  // =========================
+  // UI
+  // =========================
   return (
     <div className="flex h-screen bg-gray-100">
-      <ConversaLista conversas={conversas} onSelect={handleSelectConversa} />
 
-      {conversaSelecionada ? (
-        <ChatJanela
-          conversa={conversas[conversaSelecionada]}
-          usuarioId={cliente?.id}
-        />
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-400">
-          Selecione uma conversa
+      {/* =========================
+          SIDEBAR
+      ========================= */}
+      <div className="w-1/3 bg-white border-r overflow-y-auto">
+        <div className="p-4 font-bold border-b">
+          Conversas
         </div>
-      )}
+
+        {Object.entries(conversas).map(([chave, conv]) => {
+          const ultima = conv.mensagens[conv.mensagens.length - 1];
+
+          return (
+            <div
+              key={chave}
+              onClick={() => {
+                setConversaSelecionada(chave);
+                setLiberada(false);
+                setCodigoInput("");
+              }}
+              className="p-3 border-b hover:bg-gray-100 cursor-pointer flex gap-3"
+            >
+              <img
+                src={conv.animal.urlImagem}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+
+              <div className="flex-1">
+                <div className="flex justify-between">
+                  <strong>{conv.animal.nome}</strong>
+                  <span className="text-xs text-gray-500">
+                    {ultima &&
+                      new Date(ultima.criadoEm).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                  </span>
+                </div>
+
+                <div className="text-xs text-gray-500 truncate">
+                  {ultima?.mensagem}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* =========================
+          ÁREA PRINCIPAL
+      ========================= */}
+      <div className="flex-1 flex items-center justify-center">
+
+        {!conversaAtual ? (
+          <div className="text-gray-400">
+            Selecione uma conversa
+          </div>
+        ) : isAdmin && !liberada ? (
+          // 🔐 ADMIN BLOQUEADO
+          <div className="bg-white p-6 rounded shadow w-80">
+            <h2 className="font-bold mb-3">🔐 Liberar conversa</h2>
+
+            <input
+              className="border w-full p-2"
+              placeholder="Digite o código"
+              value={codigoInput}
+              onChange={(e) => setCodigoInput(e.target.value)}
+            />
+
+            <button
+              onClick={validarCodigo}
+              className="bg-blue-600 text-white w-full mt-2 p-2"
+            >
+              Liberar
+            </button>
+          </div>
+        ) : (
+          // 💬 CHAT LIBERADO
+          <div className="w-full h-full">
+            <ChatJanela
+              conversa={conversaAtual}
+              usuarioId={cliente?.id}
+            />
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

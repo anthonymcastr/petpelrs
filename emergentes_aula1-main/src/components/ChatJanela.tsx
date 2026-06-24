@@ -14,8 +14,12 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
   const [enviando, setEnviando] = useState(false);
 
   const { mensagens, animal, outroUsuario } = conversa;
+
   const animalId = animal?.id;
   const destinatarioId = outroUsuario?.id;
+
+  // 🧠 código da conversa (vem da primeira mensagem)
+  const codigoConversa = mensagens?.[0]?.codigoConversa;
 
   async function enviarMensagem() {
     if (!novaMensagem.trim() || !usuarioId || !animalId || !destinatarioId)
@@ -38,7 +42,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
       if (!resp.ok) throw new Error("Erro ao enviar mensagem");
 
       setNovaMensagem("");
-      // polling vai buscar automaticamente
+      // polling vai atualizar automaticamente
     } catch (error) {
       console.error(error);
       alert("Erro ao enviar mensagem");
@@ -49,12 +53,31 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
 
   return (
     <div className="flex flex-col flex-1 border-l">
-      {/* Header */}
-      <div className="p-4 border-b font-bold bg-gray-100">
-        Conversa sobre {animal?.nome}
+
+      {/* HEADER */}
+      <div className="p-4 border-b bg-gray-100">
+        <div className="font-bold">
+          Conversa sobre {animal?.nome}
+        </div>
+
+        {/* Código da conversa */}
+        {codigoConversa && (
+          <div className="text-xs text-gray-600 mt-1 flex items-center gap-2">
+            <span>
+              Código: <b>{codigoConversa}</b>
+            </span>
+
+            <button
+              onClick={() => navigator.clipboard.writeText(codigoConversa)}
+              className="text-blue-600 hover:underline"
+            >
+              copiar
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Mensagens */}
+      {/* MENSAGENS */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {mensagens.map((msg) => {
           const enviadaPorMim = msg.remetenteId === usuarioId;
@@ -69,6 +92,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
               }`}
             >
               <p>{msg.mensagem}</p>
+
               <span className="text-[10px] opacity-70 block mt-1">
                 {new Date(msg.criadoEm).toLocaleString()}
               </span>
@@ -77,7 +101,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
         })}
       </div>
 
-      {/* Input */}
+      {/* INPUT */}
       <div className="p-4 border-t flex gap-2">
         <input
           value={novaMensagem}
@@ -85,6 +109,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
           placeholder="Digite sua mensagem..."
           className="flex-1 border rounded px-3 py-2"
         />
+
         <button
           onClick={enviarMensagem}
           disabled={enviando}
