@@ -152,21 +152,20 @@ export default function Listagem() {
         ) : (
           <div
             className="
-              flex
-              flex-col
-              items-center
+              grid
+              w-full
+              max-w-7xl
               gap-6
-              max-w-6xl
               mx-auto
               pb-2
-              sm:flex-row sm:justify-center sm:flex-wrap
+              [grid-template-columns:repeat(auto-fit,minmax(250px,320px))]
+              justify-center
             "
           >
             {animais.length > 0 ? (
               animais.map((animal) => (
-                <div className="w-full flex-1 flex-shrink-0">
+                <div key={animal.id} className="w-full max-w-[320px]">
                   <CardAnimal
-                    key={animal.id}
                     data={animal}
                     onFazerContato={() => handleVerDetalhes(animal.id)}
                     isAdmin={isAdmin}
@@ -175,7 +174,7 @@ export default function Listagem() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-500 text-center w-full">
+              <p className="text-gray-500 text-center w-full col-span-full">
                 Nenhum animal encontrado
               </p>
             )}

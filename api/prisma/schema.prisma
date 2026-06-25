@@ -46,6 +46,7 @@ model Contato {
   animalId       Int
   remetenteId    Int
   destinatarioId Int
+  codigoConversa String
 
   animal       Animal  @relation(fields: [animalId], references: [id], onDelete: Cascade)
   remetente    Cliente @relation("ContatoRemetente", fields: [remetenteId], references: [id])

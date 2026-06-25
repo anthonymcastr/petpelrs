@@ -1,6 +1,7 @@
 import { Router } from "express"
 import bcrypt from "bcrypt"
 import { PrismaClient } from "@prisma/client"
+import jwt from "jsonwebtoken"
 
 const prisma = new PrismaClient()
 const router = Router()
@@ -36,11 +37,21 @@ router.post("/", async (req, res) => {
       })
     }
 
+    const token = jwt.sign(
+      {
+        id: admin.id,
+        role: admin.role,
+      },
+      process.env.JWT_SECRET || process.env.JWT_KEY || "segredo",
+      { expiresIn: "1h" }
+    )
+
     return res.status(200).json({
       id: admin.id,
       nome: admin.nome,
       email: admin.email,
-      role: admin.role
+      role: admin.role,
+      token
     })
 
   } catch (error) {

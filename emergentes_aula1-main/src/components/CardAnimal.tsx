@@ -22,7 +22,11 @@ export function CardAnimal({
   const tipo = tipoConfig[data.tipo];
 
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden w-full max-w-xs h-[380px] mx-auto hover:shadow-lg transition flex flex-col">
+    <div
+      className={`bg-white rounded-xl shadow-md overflow-hidden w-full max-w-xs mx-auto hover:shadow-lg transition flex flex-col ${
+        isAdmin ? "min-h-[430px] h-auto" : "h-[380px]"
+      }`}
+    >
       {/* Imagem */}
       <div className="relative h-48 flex-shrink-0">
         <img

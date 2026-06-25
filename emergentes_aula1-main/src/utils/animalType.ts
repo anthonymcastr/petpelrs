@@ -21,3 +21,6 @@ export type Animal = AnimalBase & {
 export type AnimalComUsuario = AnimalBase & {
   usuario: UsuarioType
 }
+
+export type AnimalType = Animal | AnimalComUsuario
+

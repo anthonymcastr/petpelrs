@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { AnimalComUsuario } from "../utils/AnimalType";
+import type { AnimalComUsuario } from "../utils/animalType";
 import { useClienteStore } from "../context/ClienteContext";
 
 type Props = {
