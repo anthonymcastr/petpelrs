@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type ChatJanelaProps = {
   conversa: {
@@ -20,6 +20,41 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
 
   // 🧠 código da conversa (vem da primeira mensagem)
   const codigoConversa = mensagens?.[0]?.codigoConversa;
+
+  useEffect(() => {
+    if (!usuarioId || !animalId || !destinatarioId) return;
+
+    const temMensagensNaoLidas = mensagens.some(
+      (msg) => msg.destinatarioId === usuarioId && !msg.lida
+    );
+
+    if (!temMensagensNaoLidas) return;
+
+    async function marcarComoLidas() {
+      try {
+        const resp = await fetch(
+          `${import.meta.env.VITE_API_URL}/contatos/marcar-lidas`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              usuarioId: Number(usuarioId),
+              animalId: Number(animalId),
+              outroUsuarioId: Number(destinatarioId),
+            }),
+          }
+        );
+
+        if (!resp.ok) return;
+
+        window.dispatchEvent(new Event("mensagens-lidas"));
+      } catch (error) {
+        console.error("Erro ao marcar mensagens como lidas", error);
+      }
+    }
+
+    marcarComoLidas();
+  }, [animalId, destinatarioId, mensagens, usuarioId]);
 
   async function enviarMensagem() {
     if (!novaMensagem.trim() || !usuarioId || !animalId || !destinatarioId)

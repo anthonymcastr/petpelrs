@@ -33,7 +33,11 @@ export default function Titulo() {
     buscarNaoLidas();
     // Atualiza a cada 30 segundos
     const interval = setInterval(buscarNaoLidas, 30000);
-    return () => clearInterval(interval);
+    window.addEventListener("mensagens-lidas", buscarNaoLidas);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("mensagens-lidas", buscarNaoLidas);
+    };
   }, [cliente?.id, apiUrl]);
 
   function handleLogout() {
