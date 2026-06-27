@@ -1,5 +1,10 @@
 # PetPelRS
 
+Trabalho de Conclusão de Curso (PD1)  
+Tecnologia em Análise e Desenvolvimento de Sistemas – UNISENAC RS
+
+**Autores:** Anthony Martins de Castro & Christiano Dias Ferraz
+
 PetPelRS é uma aplicação web voltada ao gerenciamento de animais, clientes, contatos e propostas de adoção. O sistema foi pensado para centralizar informações, facilitar a comunicação entre usuários e organização responsável, e oferecer um painel administrativo para acompanhamento das interações.
 
 ## Visão geral

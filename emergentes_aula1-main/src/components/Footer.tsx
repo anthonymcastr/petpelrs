@@ -7,7 +7,7 @@ export default function Footer() {
           <h3 className="text-lg font-bold text-white mb-3">Sobre</h3>
           <p className="text-sm leading-relaxed">
             O PetPel RS é uma plataforma desenvolvida por Anthony Martins de
-            Castro, estudante do 5º semestre de ADS no UNISENAC RS, com o
+            Castro e Christiano Ferraz, estudantes do 5º semestre de ADS no UNISENAC RS, com o
             objetivo de ajudar na busca por pets perdidos, promover adoções
             responsáveis e conectar pessoas que se preocupam com o bem-estar
             animal.
