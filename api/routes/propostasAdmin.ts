@@ -27,6 +27,8 @@ router.get("/", async (req, res) => {
       criadoEm: contato.criadoEm,
       animal: contato.animal,
       cliente: contato.remetente,
+      remetente: contato.remetente,
+      destinatario: contato.destinatario,
     }));
 
     res.json(lista);

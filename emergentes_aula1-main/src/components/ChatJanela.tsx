@@ -25,7 +25,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
     if (!usuarioId || !animalId || !destinatarioId) return;
 
     const temMensagensNaoLidas = mensagens.some(
-      (msg) => msg.destinatarioId === usuarioId && !msg.lida
+      (msg) => msg.destinatarioId === usuarioId && !msg.lida,
     );
 
     if (!temMensagensNaoLidas) return;
@@ -42,7 +42,7 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
               animalId: Number(animalId),
               outroUsuarioId: Number(destinatarioId),
             }),
-          }
+          },
         );
 
         if (!resp.ok) return;
@@ -88,12 +88,15 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
 
   return (
     <div className="flex flex-col flex-1 border-l">
-
       {/* HEADER */}
       <div className="p-4 border-b bg-gray-100">
-        <div className="font-bold">
-          Conversa sobre {animal?.nome}
-        </div>
+        <div className="font-bold">Conversa sobre {animal?.nome}</div>
+
+        {outroUsuario?.nome && (
+          <div className="text-xs text-gray-600 mt-1">
+            Conversando com {outroUsuario.nome}
+          </div>
+        )}
 
         {/* Código da conversa */}
         {codigoConversa && (
@@ -116,6 +119,9 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {mensagens.map((msg) => {
           const enviadaPorMim = msg.remetenteId === usuarioId;
+          const nomeRemetente =
+            msg.remetente?.nome || (enviadaPorMim ? "Você" : "Usuário");
+          const nomeDestinatario = msg.destinatario?.nome;
 
           return (
             <div
@@ -126,6 +132,16 @@ export default function ChatJanela({ conversa, usuarioId }: ChatJanelaProps) {
                   : "mr-auto bg-white border"
               }`}
             >
+              <div className="text-[10px] font-semibold opacity-80 mb-1">
+                {enviadaPorMim ? `${nomeRemetente}` : nomeRemetente}
+                {nomeDestinatario && !enviadaPorMim && (
+                  <span className="font-normal">
+                    {" "}
+                    · para {nomeDestinatario}
+                  </span>
+                )}
+              </div>
+
               <p>{msg.mensagem}</p>
 
               <span className="text-[10px] opacity-70 block mt-1">

@@ -7,6 +7,7 @@ type Inputs = {
   nome: string;
   email: string;
   senha: string;
+  confirmarSenha: string;
   telefone: string;
   cpf: string;
 };
@@ -75,8 +76,11 @@ export default function Cadastro() {
 
   const navigate = useNavigate();
   const [senhaFocada, setSenhaFocada] = useState(false);
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [mostrarConfirmacaoSenha, setMostrarConfirmacaoSenha] = useState(false);
 
   const senha = watch("senha", "");
+  const confirmarSenha = watch("confirmarSenha", "");
   const nome = watch("nome", "");
   const email = watch("email", "");
   const telefone = watch("telefone", "");
@@ -150,11 +154,21 @@ export default function Cadastro() {
     /[0-9]/.test(senha) &&
     /[!@#$%^&*(),.?":{}|<>]/.test(senha);
 
+  const confirmarSenhaValida =
+    confirmarSenha.length > 0 && confirmarSenha === senha;
+
   const onSubmit = async (data: Inputs) => {
     if (!senhaValida) {
       toast.error("A senha não atende todos os requisitos");
       return;
     }
+
+    if (data.senha !== data.confirmarSenha) {
+      toast.error("As senhas não conferem");
+      return;
+    }
+
+    const { confirmarSenha: _, ...payload } = data;
 
     try {
       const response = await fetch(`${apiUrl}/clientes/cadastro`, {
@@ -162,7 +176,7 @@ export default function Cadastro() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
 
       if (response.status === 201) {
@@ -170,7 +184,7 @@ export default function Cadastro() {
           "Cadastro realizado com sucesso! Redirecionando para o login...",
           {
             duration: 5000,
-          }
+          },
         );
 
         setTimeout(() => {
@@ -326,16 +340,67 @@ export default function Cadastro() {
                 Senha <span className="text-red-500">*</span>
               </label>
 
-              <input
-                type="password"
-                id="senha"
-                placeholder="Digite uma senha forte"
-                {...register("senha", {
-                  required: "Senha é obrigatória",
-                })}
-                onFocus={() => setSenhaFocada(true)}
-                className={getInputClass("senha", senhaValida)}
-              />
+              <div className="relative">
+                <input
+                  type={mostrarSenha ? "text" : "password"}
+                  id="senha"
+                  placeholder="Digite uma senha forte"
+                  {...register("senha", {
+                    required: "Senha é obrigatória",
+                  })}
+                  onFocus={() => setSenhaFocada(true)}
+                  className={`${getInputClass("senha", senhaValida)} pr-12`}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((valor) => !valor)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  {mostrarSenha ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.98 8.223A10.477 10.477 0 0112 4.5c4.135 0 7.863 2.123 10.02 5.723a.75.75 0 010 .554A10.477 10.477 0 0112 19.5c-4.135 0-7.863-2.123-10.02-5.723a.75.75 0 010-.554z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
 
               {errors.senha && (
                 <p className="text-red-500 text-sm mt-1">
@@ -348,6 +413,92 @@ export default function Cadastro() {
               )}
             </div>
 
+            {/* Confirmação de senha */}
+            <div>
+              <label
+                htmlFor="confirmarSenha"
+                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+              >
+                Confirmação de senha <span className="text-red-500">*</span>
+              </label>
+
+              <div className="relative">
+                <input
+                  type={mostrarConfirmacaoSenha ? "text" : "password"}
+                  id="confirmarSenha"
+                  placeholder="Digite a senha novamente"
+                  {...register("confirmarSenha", {
+                    required: "Confirmação de senha é obrigatória",
+                    validate: (value) =>
+                      value === senha || "As senhas não conferem",
+                  })}
+                  className={`${getInputClass(
+                    "confirmarSenha",
+                    confirmarSenhaValida,
+                  )} pr-12`}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setMostrarConfirmacaoSenha((valor) => !valor)}
+                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                  aria-label={
+                    mostrarConfirmacaoSenha
+                      ? "Ocultar confirmação de senha"
+                      : "Mostrar confirmação de senha"
+                  }
+                >
+                  {mostrarConfirmacaoSenha ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.98 8.223A10.477 10.477 0 0112 4.5c4.135 0 7.863 2.123 10.02 5.723a.75.75 0 010 .554A10.477 10.477 0 0112 19.5c-4.135 0-7.863-2.123-10.02-5.723a.75.75 0 010-.554z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="w-5 h-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {errors.confirmarSenha && (
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.confirmarSenha.message}
+                </p>
+              )}
+            </div>
+
             {/* Aviso */}
             <p className="text-sm text-gray-500 dark:text-gray-400">
               <span className="text-red-500">*</span> Todos os campos são
@@ -357,9 +508,9 @@ export default function Cadastro() {
             {/* Botão */}
             <button
               type="submit"
-              disabled={!senhaValida}
+              disabled={!senhaValida || !confirmarSenhaValida}
               className={`w-full text-white font-medium rounded-lg py-2.5 transition ${
-                senhaValida
+                senhaValida && confirmarSenhaValida
                   ? "bg-blue-600 hover:bg-blue-700 cursor-pointer"
                   : "bg-gray-400 cursor-not-allowed"
               }`}

@@ -1,5 +1,6 @@
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import type { Animal } from "../utils/animalType";
 import { useClienteStore } from "../context/ClienteContext";
@@ -8,6 +9,7 @@ export default function Inclusao() {
   const { cliente } = useClienteStore();
   const navigate = useNavigate();
   const [alerta, setAlerta] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
 
   const {
     register,
@@ -26,7 +28,14 @@ export default function Inclusao() {
     }
   }, [cliente, setValue]);
 
+  function aguardar(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   async function onSubmit(data: Animal) {
+    const inicio = Date.now();
+    setCarregando(true);
+
     try {
       const resp = await fetch(`${API_URL}/animais`, {
         method: "POST",
@@ -44,12 +53,21 @@ export default function Inclusao() {
       }
 
       setAlerta(null);
-      alert("Animal cadastrado com sucesso!");
+      const tempoDecorrido = Date.now() - inicio;
+      if (tempoDecorrido < 1200) {
+        await aguardar(1200 - tempoDecorrido);
+      }
+
+      toast.success("Animal cadastrado com sucesso!", {
+        duration: 4000,
+      });
       reset();
       navigate("/"); // volta pra listagem (home)
     } catch (error) {
       console.error(error);
       setAlerta("Erro ao cadastrar animal");
+    } finally {
+      setCarregando(false);
     }
   }
 
@@ -100,7 +118,9 @@ export default function Inclusao() {
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6">
           {/* Nome */}
           <div>
-            <label className="block mb-1 font-semibold">Nome</label>
+            <label className="block mb-1 font-semibold">
+              Nome <span className="text-red-500">*</span>
+            </label>
             <input
               {...register("nome", { required: "Nome obrigatório" })}
               className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
@@ -113,7 +133,9 @@ export default function Inclusao() {
 
           {/* Idade */}
           <div>
-            <label className="block mb-1 font-semibold">Idade</label>
+            <label className="block mb-1 font-semibold">
+              Idade <span className="text-red-500">*</span>
+            </label>
             <input
               type="number"
               {...register("idade", {
@@ -131,7 +153,9 @@ export default function Inclusao() {
 
           {/* Raça */}
           <div>
-            <label className="block mb-1 font-semibold">Raça</label>
+            <label className="block mb-1 font-semibold">
+              Raça <span className="text-red-500">*</span>
+            </label>
             <input
               {...register("raca", { required: "Raça obrigatória" })}
               className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
@@ -144,7 +168,9 @@ export default function Inclusao() {
 
           {/* Tipo */}
           <div>
-            <label className="block mb-1 font-semibold">Tipo</label>
+            <label className="block mb-1 font-semibold">
+              Tipo <span className="text-red-500">*</span>
+            </label>
             <select
               {...register("tipo", { required: "Tipo obrigatório" })}
               className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
@@ -161,7 +187,9 @@ export default function Inclusao() {
 
           {/* Cidade */}
           <div>
-            <label className="block mb-1 font-semibold">Cidade</label>
+            <label className="block mb-1 font-semibold">
+              Cidade <span className="text-red-500">*</span>
+            </label>
             <select
               {...register("cidade", { required: "Cidade obrigatória" })}
               className="w-full rounded-lg border px-4 py-2 focus:ring-2 focus:ring-blue-500"
@@ -178,7 +206,9 @@ export default function Inclusao() {
 
           {/* Imagem */}
           <div>
-            <label className="block mb-1 font-semibold">URL da imagem</label>
+            <label className="block mb-1 font-semibold">
+              URL da imagem <span className="text-red-500">*</span>
+            </label>
             <input
               {...register("urlImagem", {
                 required: "URL obrigatória",
@@ -214,12 +244,41 @@ export default function Inclusao() {
             />
           </div>
 
+          <p className="text-sm text-gray-500">
+            <span className="text-red-500">*</span> Todos os campos com esse
+            símbolo são de preenchimento obrigatório.
+          </p>
+
           {/* Botão */}
           <button
             type="submit"
-            className="mt-4 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition cursor-pointer"
+            disabled={carregando}
+            className="mt-4 w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Cadastrar Animal
+            {carregando && (
+              <svg
+                className="w-4 h-4 animate-spin"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  opacity="0.25"
+                />
+                <path
+                  d="M22 12a10 10 0 0 1-10 10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+            {carregando ? "Cadastrando..." : "Cadastrar Animal"}
           </button>
         </form>
       </div>

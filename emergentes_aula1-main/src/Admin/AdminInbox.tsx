@@ -8,6 +8,8 @@ type ContatoResumo = {
   criadoEm: string;
   animal: any;
   cliente: any;
+  remetente?: any;
+  destinatario?: any;
 };
 
 type Mensagem = {
@@ -25,7 +27,8 @@ export default function AdminInbox() {
 
   const [contatos, setContatos] = useState<ContatoResumo[]>([]);
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [contatoSelecionado, setContatoSelecionado] = useState<ContatoResumo | null>(null);
+  const [contatoSelecionado, setContatoSelecionado] =
+    useState<ContatoResumo | null>(null);
 
   // 🔐 controle de acesso
   const [codigoInput, setCodigoInput] = useState("");
@@ -67,7 +70,7 @@ export default function AdminInbox() {
             Authorization: `Bearer ${admin?.token}`,
           },
           body: JSON.stringify({ codigo: contatoSelecionado.codigoConversa }),
-        }
+        },
       );
 
       const data = await res.json();
@@ -90,7 +93,6 @@ export default function AdminInbox() {
   // =========================
   return (
     <div className="flex h-screen">
-
       {/* SIDEBAR */}
       <div className="w-1/3 border-r overflow-y-auto bg-white">
         <h2 className="p-3 font-bold border-b">Admin - Conversas</h2>
@@ -102,10 +104,10 @@ export default function AdminInbox() {
               contatoSelecionado?.id === contato.id ? "bg-gray-100" : ""
             }`}
             onClick={() => {
-              setContatoSelecionado(contato)
-              setCodigoInput("")
-              setConversaLiberada(false)
-              setMensagens([])
+              setContatoSelecionado(contato);
+              setCodigoInput("");
+              setConversaLiberada(false);
+              setMensagens([]);
             }}
           >
             <div className="flex gap-3 items-center">
@@ -121,7 +123,10 @@ export default function AdminInbox() {
                 </div>
 
                 <div className="text-xs text-gray-500">
-                  {contato.cliente?.nome}
+                  {contato.remetente?.nome || contato.cliente?.nome}
+                  {contato.destinatario?.nome
+                    ? ` → ${contato.destinatario.nome}`
+                    : ""}
                 </div>
               </div>
             </div>
@@ -138,7 +143,9 @@ export default function AdminInbox() {
         ) : !conversaLiberada ? (
           <div className="h-full flex items-center justify-center p-6">
             <div className="w-full max-w-md bg-white border rounded-xl p-6 shadow-sm">
-              <div className="text-sm text-gray-500 mb-2">Conversa bloqueada</div>
+              <div className="text-sm text-gray-500 mb-2">
+                Conversa bloqueada
+              </div>
 
               <h3 className="font-bold text-lg mb-2">
                 {contatoSelecionado.animal.nome}
@@ -170,6 +177,13 @@ export default function AdminInbox() {
               <div className="text-xs text-gray-500">
                 Código: {contatoSelecionado.codigoConversa}
               </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {contatoSelecionado.remetente?.nome ||
+                  contatoSelecionado.cliente?.nome}
+                {contatoSelecionado.destinatario?.nome
+                  ? ` → ${contatoSelecionado.destinatario.nome}`
+                  : ""}
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -178,6 +192,12 @@ export default function AdminInbox() {
                   key={msg.id}
                   className="max-w-2xl bg-white border rounded-lg p-3"
                 >
+                  <p className="text-[11px] font-semibold text-gray-600 mb-1">
+                    De: {msg.remetente?.nome || "Não informado"}
+                    {msg.destinatario?.nome
+                      ? ` · Para: ${msg.destinatario.nome}`
+                      : ""}
+                  </p>
                   <p className="text-sm">{msg.mensagem}</p>
                   <span className="text-[10px] text-gray-400 block mt-1">
                     {new Date(msg.criadoEm).toLocaleString()}

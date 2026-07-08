@@ -289,6 +289,8 @@ router.get("/:clienteId", async (req, res) => {
         contato.remetenteId === clienteId
           ? contato.destinatario
           : contato.remetente,
+      remetente: contato.remetente,
+      destinatario: contato.destinatario,
     }))
 
     return res.json(lista)

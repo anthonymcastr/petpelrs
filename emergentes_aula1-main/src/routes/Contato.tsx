@@ -1,63 +1,75 @@
-import { useEffect, useState } from "react"
-import { useClienteStore } from "../context/ClienteContext"
-import { useAdminStore } from "../Admin/context/AdminContext"
+import { useEffect, useState } from "react";
+import { useClienteStore } from "../context/ClienteContext";
+import { useAdminStore } from "../Admin/context/AdminContext";
 
 type ContatoType = {
-  id: number
-  codigoConversa?: string
-  mensagem: string
-  resposta?: string
-  criadoEm: string
+  id: number;
+  codigoConversa?: string;
+  mensagem: string;
+  resposta?: string;
+  criadoEm: string;
+  remetente?: {
+    id: number;
+    nome: string;
+    email?: string;
+  };
+  destinatario?: {
+    id: number;
+    nome: string;
+    email?: string;
+  };
   animal: {
-    id: number
-    nome: string
-    raca: string
-    idade: number
-    urlImagem: string
-    cidade: string
-    tipo: string
-  }
+    id: number;
+    nome: string;
+    raca: string;
+    idade: number;
+    urlImagem: string;
+    cidade: string;
+    tipo: string;
+  };
   cliente: {
-    id: number
-    nome: string
-    email: string
-  }
-}
+    id: number;
+    nome: string;
+    email: string;
+  };
+};
 
 type MensagemConversa = {
-  id: number
-  mensagem: string
-  criadoEm: string
+  id: number;
+  mensagem: string;
+  criadoEm: string;
   remetente: {
-    id: number
-    nome: string
-  }
+    id: number;
+    nome: string;
+  };
   destinatario: {
-    id: number
-    nome: string
-  }
+    id: number;
+    nome: string;
+  };
   animal: {
-    id: number
-    nome: string
-    urlImagem: string
-    raca: string
-    cidade: string
-  }
-  codigoConversa: string
-}
+    id: number;
+    nome: string;
+    urlImagem: string;
+    raca: string;
+    cidade: string;
+  };
+  codigoConversa: string;
+};
 
-const apiUrl = import.meta.env.VITE_API_URL
+const apiUrl = import.meta.env.VITE_API_URL;
 
 export default function Contato() {
-  const [contatos, setContatos] = useState<ContatoType[]>([])
+  const [contatos, setContatos] = useState<ContatoType[]>([]);
   const [contatoSelecionado, setContatoSelecionado] =
-    useState<ContatoType | null>(null)
-  const [codigoInput, setCodigoInput] = useState("")
-  const [conversaLiberada, setConversaLiberada] = useState(false)
-  const [mensagensLiberadas, setMensagensLiberadas] = useState<MensagemConversa[]>([])
+    useState<ContatoType | null>(null);
+  const [codigoInput, setCodigoInput] = useState("");
+  const [conversaLiberada, setConversaLiberada] = useState(false);
+  const [mensagensLiberadas, setMensagensLiberadas] = useState<
+    MensagemConversa[]
+  >([]);
 
-  const { cliente } = useClienteStore()
-  const { admin } = useAdminStore()
+  const { cliente } = useClienteStore();
+  const { admin } = useAdminStore();
 
   useEffect(() => {
     async function buscar() {
@@ -65,29 +77,29 @@ export default function Contato() {
         if (admin?.role === "admin") {
           const res = await fetch(`${apiUrl}/admin/contatos`, {
             headers: { Authorization: `Bearer ${admin.token}` },
-          })
-          const data = await res.json()
+          });
+          const data = await res.json();
 
-          setContatos(data)
+          setContatos(data);
         } else if (cliente) {
-          const res = await fetch(`${apiUrl}/contatos/${cliente.id}`)
-          setContatos(await res.json())
+          const res = await fetch(`${apiUrl}/contatos/${cliente.id}`);
+          setContatos(await res.json());
         }
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
     }
-    buscar()
-  }, [admin, cliente])
+    buscar();
+  }, [admin, cliente]);
 
   function dataDMA(data: string) {
-    return new Date(data).toLocaleDateString("pt-BR")
+    return new Date(data).toLocaleDateString("pt-BR");
   }
 
   async function liberarConversa() {
     if (!contatoSelecionado?.codigoConversa) {
-      alert("Conversa sem código")
-      return
+      alert("Conversa sem código");
+      return;
     }
 
     if (codigoInput === contatoSelecionado.codigoConversa) {
@@ -100,51 +112,47 @@ export default function Contato() {
               Authorization: `Bearer ${admin.token}`,
             },
             body: JSON.stringify({ codigo: contatoSelecionado.codigoConversa }),
-          })
+          });
 
-          const data = await res.json()
+          const data = await res.json();
 
           if (!res.ok) {
-            alert(data?.erro || "Não foi possível liberar a conversa")
-            return
+            alert(data?.erro || "Não foi possível liberar a conversa");
+            return;
           }
 
-          setMensagensLiberadas(data)
+          setMensagensLiberadas(data);
         } catch (error) {
-          console.error(error)
-          alert("Erro ao liberar conversa")
-          return
+          console.error(error);
+          alert("Erro ao liberar conversa");
+          return;
         }
       }
 
-      setConversaLiberada(true)
-      return
+      setConversaLiberada(true);
+      return;
     }
 
-    alert("Código incorreto")
+    alert("Código incorreto");
   }
 
   return (
     <div className="h-[calc(100vh-80px)] bg-gray-100 flex">
       {/* SIDEBAR */}
       <aside className="w-full md:w-1/3 lg:w-1/4 bg-white border-r overflow-y-auto">
-        <h2 className="p-4 text-xl font-bold border-b">
-          Conversas
-        </h2>
+        <h2 className="p-4 text-xl font-bold border-b">Conversas</h2>
 
         {contatos.map((contato) => (
           <div
             key={contato.id}
             onClick={() => {
-              setContatoSelecionado(contato)
-              setCodigoInput("")
-              setConversaLiberada(false)
-              setMensagensLiberadas([])
+              setContatoSelecionado(contato);
+              setCodigoInput("");
+              setConversaLiberada(false);
+              setMensagensLiberadas([]);
             }}
             className={`flex gap-3 p-4 cursor-pointer hover:bg-gray-100 ${
-              contatoSelecionado?.id === contato.id
-                ? "bg-gray-200"
-                : ""
+              contatoSelecionado?.id === contato.id ? "bg-gray-200" : ""
             }`}
           >
             <img
@@ -153,8 +161,14 @@ export default function Contato() {
             />
 
             <div className="flex-1">
-              <p className="font-semibold">
-                {contato.animal.nome}
+              <p className="font-semibold">{contato.animal.nome}</p>
+              <p className="text-[11px] text-gray-500 truncate">
+                {contato.remetente?.nome ||
+                  contato.cliente?.nome ||
+                  "Remetente não informado"}
+                {contato.destinatario?.nome
+                  ? ` → ${contato.destinatario.nome}`
+                  : ""}
               </p>
               {contato.codigoConversa && (
                 <p className="text-[11px] text-gray-400">
@@ -189,6 +203,19 @@ export default function Contato() {
                   <h3 className="font-bold text-lg mb-2">
                     {contatoSelecionado.animal.nome}
                   </h3>
+
+                  <p className="text-sm text-gray-600 mb-1">
+                    Remetente:{" "}
+                    {contatoSelecionado.remetente?.nome ||
+                      contatoSelecionado.cliente?.nome ||
+                      "Não informado"}
+                  </p>
+
+                  {contatoSelecionado.destinatario?.nome && (
+                    <p className="text-sm text-gray-600 mb-4">
+                      Destinatário: {contatoSelecionado.destinatario.nome}
+                    </p>
+                  )}
 
                   <p className="text-sm text-gray-600 mb-4">
                     Digite o código da conversa para liberar a visualização.
@@ -232,7 +259,7 @@ export default function Contato() {
                 <div className="flex-1 p-6 space-y-4 overflow-y-auto">
                   {admin?.role === "admin" ? (
                     mensagensLiberadas.map((mensagem) => {
-                      const enviadaPorMim = mensagem.remetente.id === admin.id
+                      const enviadaPorMim = mensagem.remetente.id === admin.id;
 
                       return (
                         <div
@@ -243,12 +270,21 @@ export default function Contato() {
                               : "bg-white border"
                           }`}
                         >
+                          <p className="text-[11px] font-semibold opacity-80 mb-1">
+                            De: {mensagem.remetente.nome}
+                            {mensagem.destinatario?.nome && (
+                              <span className="font-normal">
+                                {" "}
+                                · Para: {mensagem.destinatario.nome}
+                              </span>
+                            )}
+                          </p>
                           <p>{mensagem.mensagem}</p>
                           <span className="text-xs opacity-80 block mt-1">
                             {new Date(mensagem.criadoEm).toLocaleString()}
                           </span>
                         </div>
-                      )
+                      );
                     })
                   ) : (
                     <>
@@ -282,5 +318,5 @@ export default function Contato() {
         )}
       </main>
     </div>
-  )
+  );
 }
