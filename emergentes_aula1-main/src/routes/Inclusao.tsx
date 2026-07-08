@@ -151,7 +151,7 @@ export default function Inclusao() {
             )}
           </div>
 
-          {/* Raça */}
+          
           <div>
             <label className="block mb-1 font-semibold">
               Raça <span className="text-red-500">*</span>
