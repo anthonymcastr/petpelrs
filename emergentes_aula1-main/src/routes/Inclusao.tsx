@@ -119,7 +119,7 @@ export default function Inclusao() {
           {/* Nome */}
           <div>
             <label className="block mb-1 font-semibold">
-              Nome <span className="text-red-500">*</span>
+              Nome do animal <span className="text-red-500">*</span>
             </label>
             <input
               {...register("nome", { required: "Nome obrigatório" })}
