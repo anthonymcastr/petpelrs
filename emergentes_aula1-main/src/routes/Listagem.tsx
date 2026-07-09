@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { Animal, AnimalComUsuario } from "../utils/animalType";
 import { CardAnimal } from "../components/CardAnimal";
 import { CardExpandido } from "../components/CardExpandido";
+import { ConfirmacaoExclusao } from "../components/ConfirmacaoExclusao";
 import { InputPesquisa } from "../components/InputPesquisa";
 import { useAdminStore } from "../Admin/context/AdminContext";
 
@@ -11,7 +13,9 @@ export default function Listagem() {
   const [cardSelecionado, setCardSelecionado] =
     useState<AnimalComUsuario | null>(null);
   const [tipoAtivo, setTipoAtivo] = useState<string | null>(null);
-  const [loadingDetalhe, setLoadingDetalhe] = useState(false);
+  const [animalParaExcluir, setAnimalParaExcluir] = useState<number | null>(
+    null,
+  );
 
   const { admin } = useAdminStore();
   const isAdmin = admin?.role === "admin";
@@ -48,16 +52,13 @@ export default function Listagem() {
   // 🔹 Ver detalhes do animal
   const handleVerDetalhes = async (animalId: number) => {
     try {
-      setLoadingDetalhe(true);
       const res = await fetch(`${apiUrl}/animais/${animalId}`);
       if (!res.ok) throw new Error("Erro ao buscar animal");
       const animalCompleto: AnimalComUsuario = await res.json();
       setCardSelecionado(animalCompleto);
     } catch (err) {
       console.error(err);
-      alert("Erro ao carregar dados do animal");
-    } finally {
-      setLoadingDetalhe(false);
+      toast.error("Erro ao carregar dados do animal");
     }
   };
 
@@ -70,13 +71,21 @@ export default function Listagem() {
 
   // 🔹 Exclusão admin
   const excluirAnimal = async (id: number) => {
-    if (!confirm("Deseja realmente excluir este animal?")) return;
+    setAnimalParaExcluir(id);
+  };
+
+  const confirmarExclusaoAnimal = async () => {
+    if (!animalParaExcluir) return;
 
     try {
       const token = admin?.token;
-      if (!token) return alert("Você precisa estar logado como administrador");
+      if (!token) {
+        toast.error("Você precisa estar logado como administrador");
+        setAnimalParaExcluir(null);
+        return;
+      }
 
-      const res = await fetch(`${apiUrl}/animais/${id}`, {
+      const res = await fetch(`${apiUrl}/animais/${animalParaExcluir}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -86,11 +95,13 @@ export default function Listagem() {
 
       if (!res.ok) throw new Error("Erro ao excluir");
 
-      alert("Animal excluído com sucesso!");
-      handleExcluido(id);
+      toast.success("Animal excluído com sucesso!");
+      handleExcluido(animalParaExcluir);
     } catch (err) {
       console.error(err);
-      alert("Erro ao excluir animal");
+      toast.error("Erro ao excluir animal");
+    } finally {
+      setAnimalParaExcluir(null);
     }
   };
 
@@ -181,6 +192,15 @@ export default function Listagem() {
           </div>
         )}
       </section>
+
+      <ConfirmacaoExclusao
+        aberto={animalParaExcluir !== null}
+        titulo="Excluir animal?"
+        mensagem="Deseja realmente excluir este animal? Essa ação não pode ser desfeita."
+        textoConfirmar="Sim, excluir"
+        onCancelar={() => setAnimalParaExcluir(null)}
+        onConfirmar={confirmarExclusaoAnimal}
+      />
     </div>
   );
 }

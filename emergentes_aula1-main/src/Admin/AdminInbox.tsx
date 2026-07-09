@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAdminStore } from "./context/AdminContext";
 
 type ContatoResumo = {
@@ -51,12 +52,12 @@ export default function AdminInbox() {
 
   async function liberarConversa() {
     if (!contatoSelecionado?.codigoConversa) {
-      alert("Conversa sem código");
+      toast.error("Conversa sem código");
       return;
     }
 
     if (codigoInput !== contatoSelecionado.codigoConversa) {
-      alert("Código incorreto");
+      toast.error("Código incorreto");
       return;
     }
 
@@ -76,7 +77,7 @@ export default function AdminInbox() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data?.erro || "Não foi possível liberar a conversa");
+        toast.error(data?.erro || "Não foi possível liberar a conversa");
         return;
       }
 
@@ -84,7 +85,7 @@ export default function AdminInbox() {
       setConversaLiberada(true);
     } catch (error) {
       console.error(error);
-      alert("Erro ao liberar conversa");
+      toast.error("Erro ao liberar conversa");
     }
   }
 
@@ -92,15 +93,15 @@ export default function AdminInbox() {
   // UI
   // =========================
   return (
-    <div className="flex h-screen">
+    <div className="flex h-[100dvh] flex-col overflow-hidden md:flex-row">
       {/* SIDEBAR */}
-      <div className="w-1/3 border-r overflow-y-auto bg-white">
-        <h2 className="p-3 font-bold border-b">Admin - Conversas</h2>
+      <div className="h-[32dvh] w-full overflow-y-auto border-b bg-white md:h-full md:w-1/3 md:border-b-0 md:border-r">
+        <h2 className="border-b p-3 font-bold">Admin - Conversas</h2>
 
         {contatos.map((contato) => (
           <div
             key={contato.id}
-            className={`p-3 border-b cursor-pointer hover:bg-gray-100 ${
+            className={`cursor-pointer border-b p-3 hover:bg-gray-100 ${
               contatoSelecionado?.id === contato.id ? "bg-gray-100" : ""
             }`}
             onClick={() => {
@@ -110,10 +111,10 @@ export default function AdminInbox() {
               setMensagens([]);
             }}
           >
-            <div className="flex gap-3 items-center">
+            <div className="flex items-center gap-3">
               <img
                 src={contato.animal.urlImagem}
-                className="w-10 h-10 rounded-full object-cover"
+                className="h-10 w-10 rounded-full object-cover"
               />
 
               <div className="flex-1">
@@ -135,14 +136,14 @@ export default function AdminInbox() {
       </div>
 
       {/* CHAT */}
-      <div className="flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
         {!contatoSelecionado ? (
-          <div className="h-full flex items-center justify-center text-gray-400">
+          <div className="flex flex-1 items-center justify-center p-6 text-center text-gray-400">
             Selecione uma conversa
           </div>
         ) : !conversaLiberada ? (
-          <div className="h-full flex items-center justify-center p-6">
-            <div className="w-full max-w-md bg-white border rounded-xl p-6 shadow-sm">
+          <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
+            <div className="w-full max-w-md rounded-xl border bg-white p-5 shadow-sm sm:p-6">
               <div className="text-sm text-gray-500 mb-2">
                 Conversa bloqueada
               </div>
@@ -171,26 +172,44 @@ export default function AdminInbox() {
             </div>
           </div>
         ) : (
-          <div className="h-full flex flex-col bg-gray-50">
-            <div className="p-4 border-b bg-white">
-              <div className="font-bold">{contatoSelecionado.animal.nome}</div>
-              <div className="text-xs text-gray-500">
-                Código: {contatoSelecionado.codigoConversa}
-              </div>
-              <div className="text-xs text-gray-500 mt-1">
-                {contatoSelecionado.remetente?.nome ||
-                  contatoSelecionado.cliente?.nome}
-                {contatoSelecionado.destinatario?.nome
-                  ? ` → ${contatoSelecionado.destinatario.nome}`
-                  : ""}
+          <div className="flex min-h-0 flex-1 flex-col bg-gray-50">
+            <div className="border-b bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-bold">
+                    {contatoSelecionado.animal.nome}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Código: {contatoSelecionado.codigoConversa}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {contatoSelecionado.remetente?.nome ||
+                      contatoSelecionado.cliente?.nome}
+                    {contatoSelecionado.destinatario?.nome
+                      ? ` → ${contatoSelecionado.destinatario.nome}`
+                      : ""}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setContatoSelecionado(null);
+                    setConversaLiberada(false);
+                    setCodigoInput("");
+                    setMensagens([]);
+                  }}
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            <div className="flex-1 min-h-0 space-y-3 overflow-y-auto p-3 sm:p-4">
               {mensagens.map((msg) => (
                 <div
                   key={msg.id}
-                  className="max-w-2xl bg-white border rounded-lg p-3"
+                  className="max-w-[85%] break-words whitespace-pre-wrap rounded-lg border bg-white p-3 sm:max-w-2xl"
                 >
                   <p className="text-[11px] font-semibold text-gray-600 mb-1">
                     De: {msg.remetente?.nome || "Não informado"}

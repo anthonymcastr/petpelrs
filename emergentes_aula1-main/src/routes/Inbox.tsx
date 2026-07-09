@@ -28,7 +28,9 @@ export default function Inbox() {
   const isAdmin = cliente?.role === "admin";
 
   const [mensagens, setMensagens] = useState<Mensagem[]>([]);
-  const [conversaSelecionada, setConversaSelecionada] = useState<string | null>(null);
+  const [conversaSelecionada, setConversaSelecionada] = useState<string | null>(
+    null,
+  );
 
   // 🔐 ADMIN
   const [codigoInput, setCodigoInput] = useState("");
@@ -43,7 +45,7 @@ export default function Inbox() {
     if (!cliente?.id) return;
 
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/contatos/inbox/${cliente.id}`
+      `${import.meta.env.VITE_API_URL}/contatos/inbox/${cliente.id}`,
     );
 
     const data: Mensagem[] = await res.json();
@@ -66,36 +68,39 @@ export default function Inbox() {
   // =========================
   // AGRUPAR CONVERSAS
   // =========================
-  const conversas: Record<string, Conversa> = mensagens.reduce((acc, msg) => {
-    if (!msg.animal || !msg.remetente || !msg.destinatario) return acc;
+  const conversas: Record<string, Conversa> = mensagens.reduce(
+    (acc, msg) => {
+      if (!msg.animal || !msg.remetente || !msg.destinatario) return acc;
 
-    const outro =
-      msg.remetenteId === cliente?.id ? msg.destinatario : msg.remetente;
+      const outro =
+        msg.remetenteId === cliente?.id ? msg.destinatario : msg.remetente;
 
-    const chave = `${msg.animal.id}-${outro.id}`;
+      const chave = `${msg.animal.id}-${outro.id}`;
 
-    if (!acc[chave]) {
-      acc[chave] = {
-        animal: msg.animal,
-        outroUsuario: outro,
-        mensagens: [],
-        codigoConversa: msg.codigoConversa,
-      };
-    }
+      if (!acc[chave]) {
+        acc[chave] = {
+          animal: msg.animal,
+          outroUsuario: outro,
+          mensagens: [],
+          codigoConversa: msg.codigoConversa,
+        };
+      }
 
-    acc[chave].mensagens.push(msg);
-    return acc;
-  }, {} as Record<string, Conversa>);
+      acc[chave].mensagens.push(msg);
+      return acc;
+    },
+    {} as Record<string, Conversa>,
+  );
 
   Object.values(conversas).forEach((c) => {
     c.mensagens.sort(
-      (a, b) =>
-        new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime()
+      (a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime(),
     );
   });
 
-  const conversaAtual =
-    conversaSelecionada ? conversas[conversaSelecionada] : null;
+  const conversaAtual = conversaSelecionada
+    ? conversas[conversaSelecionada]
+    : null;
 
   // =========================
   // ADMIN: VALIDAR CÓDIGO
@@ -114,15 +119,12 @@ export default function Inbox() {
   // UI
   // =========================
   return (
-    <div className="flex h-screen bg-gray-100">
-
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gray-100 md:flex-row">
       {/* =========================
           SIDEBAR
       ========================= */}
-      <div className="w-1/3 bg-white border-r overflow-y-auto">
-        <div className="p-4 font-bold border-b">
-          Conversas
-        </div>
+      <div className="h-[34dvh] w-full overflow-y-auto border-b bg-white md:h-full md:w-1/3 md:border-b-0 md:border-r">
+        <div className="border-b p-4 font-bold">Conversas</div>
 
         {Object.entries(conversas).map(([chave, conv]) => {
           const ultima = conv.mensagens[conv.mensagens.length - 1];
@@ -135,11 +137,11 @@ export default function Inbox() {
                 setLiberada(false);
                 setCodigoInput("");
               }}
-              className="p-3 border-b hover:bg-gray-100 cursor-pointer flex gap-3"
+              className="flex cursor-pointer gap-3 border-b p-3 hover:bg-gray-100 sm:p-4"
             >
               <img
                 src={conv.animal.urlImagem}
-                className="w-12 h-12 rounded-full object-cover"
+                className="h-12 w-12 rounded-full object-cover"
               />
 
               <div className="flex-1">
@@ -166,15 +168,14 @@ export default function Inbox() {
       {/* =========================
           ÁREA PRINCIPAL
       ========================= */}
-      <div className="flex-1 flex items-center justify-center">
-
+      <div className="flex flex-1 min-h-0 items-stretch justify-center">
         {!conversaAtual ? (
-          <div className="text-gray-400">
+          <div className="flex h-full items-center justify-center p-6 text-center text-gray-400">
             Selecione uma conversa
           </div>
         ) : isAdmin && !liberada ? (
           // 🔐 ADMIN BLOQUEADO
-          <div className="bg-white p-6 rounded shadow w-80">
+          <div className="mx-4 w-full max-w-md self-center rounded-xl border bg-white p-5 shadow-sm sm:p-6">
             <h2 className="font-bold mb-3">🔐 Liberar conversa</h2>
 
             <input
@@ -193,14 +194,18 @@ export default function Inbox() {
           </div>
         ) : (
           // 💬 CHAT LIBERADO
-          <div className="w-full h-full">
+          <div className="h-full min-h-0 w-full">
             <ChatJanela
               conversa={conversaAtual}
               usuarioId={cliente?.id}
+              onClose={() => {
+                setConversaSelecionada(null);
+                setLiberada(false);
+                setCodigoInput("");
+              }}
             />
           </div>
         )}
-
       </div>
     </div>
   );

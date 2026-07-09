@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { AnimalComUsuario } from "../utils/animalType";
 import { useClienteStore } from "../context/ClienteContext";
+import { ConfirmacaoExclusao } from "./ConfirmacaoExclusao";
 
 type Props = {
   animal: AnimalComUsuario;
@@ -12,6 +14,8 @@ type Props = {
 export function CardExpandido({ animal, onClose, onExcluido }: Props) {
   const [mensagem, setMensagem] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [exibindoConfirmacaoExclusao, setExibindoConfirmacaoExclusao] =
+    useState(false);
   const { cliente } = useClienteStore();
   const navigate = useNavigate();
 
@@ -20,16 +24,15 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
   const apiUrl = import.meta.env.VITE_API_URL;
 
   const handleEnviar = async () => {
-    if (!cliente?.id) return alert("Você precisa estar logado");
-    if (!mensagem.trim()) return alert("Digite uma mensagem");
+    if (!cliente?.id) return toast.error("Você precisa estar logado");
+    if (!mensagem.trim()) return toast.error("Digite uma mensagem");
 
-    // Usa usuario.id ou fallback para usuarioId
     const donoId = animal.usuario?.id || animal.usuarioId;
 
-    if (!donoId) return alert("Erro: dono do animal não encontrado");
+    if (!donoId) return toast.error("Erro: dono do animal não encontrado");
 
     if (cliente.id === donoId)
-      return alert("Você não pode enviar mensagem para si mesmo");
+      return toast.error("Você não pode enviar mensagem para si mesmo");
 
     try {
       setEnviando(true);
@@ -54,24 +57,28 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
       }
 
       setMensagem("");
-      alert("Mensagem enviada com sucesso!");
+      toast.success("Mensagem enviada com sucesso!");
       onClose();
       navigate("/inbox");
     } catch (err) {
       console.error(err);
-      alert("Erro ao enviar mensagem");
+      toast.error("Erro ao enviar mensagem");
     } finally {
       setEnviando(false);
     }
   };
 
   const handleExcluir = async () => {
-    if (!confirm("Deseja realmente excluir este animal?")) return;
+    setExibindoConfirmacaoExclusao(true);
+  };
 
+  const confirmarExclusao = async () => {
     try {
       const token = cliente?.token;
-      if (!token && !isAdmin)
-        return alert("Apenas administradores podem excluir animais");
+      if (!token && !isAdmin) {
+        toast.error("Apenas administradores podem excluir animais");
+        return;
+      }
 
       const res = await fetch(`${apiUrl}/animais/${animal.id}`, {
         method: "DELETE",
@@ -80,19 +87,20 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
 
       if (!res.ok) throw new Error("Erro ao excluir animal");
 
-      alert("Animal excluído com sucesso!");
+      toast.success("Animal excluído com sucesso!");
       onExcluido?.();
       onClose();
     } catch (err) {
       console.error(err);
-      alert("Erro ao excluir animal");
+      toast.error("Erro ao excluir animal");
+    } finally {
+      setExibindoConfirmacaoExclusao(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
       <div className="bg-white rounded-2xl max-w-lg w-full p-6 relative">
-        {/* Fechar */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:font-bold hover:text-gray-800 hover:cursor-pointer text-xl font-bold"
@@ -100,14 +108,12 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
           ✕
         </button>
 
-        {/* Imagem */}
         <img
           src={animal.urlImagem}
           alt={animal.nome}
           className="w-full h-64 object-cover rounded-xl"
         />
 
-        {/* Informações */}
         <div className="mt-4">
           <h2 className="text-2xl font-extrabold">{animal.nome}</h2>
           <p className="mt-1 text-gray-600">
@@ -128,7 +134,6 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
           </p>
         </div>
 
-        {/* Mensagem */}
         <textarea
           value={mensagem}
           onChange={(e) => setMensagem(e.target.value)}
@@ -142,7 +147,6 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
           className="mt-4 w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
         />
 
-        {/* Botões */}
         <button
           onClick={handleEnviar}
           disabled={!usuarioLogado || enviando}
@@ -163,6 +167,15 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
             Excluir Animal (Admin)
           </button>
         )}
+
+        <ConfirmacaoExclusao
+          aberto={exibindoConfirmacaoExclusao}
+          titulo="Excluir animal?"
+          mensagem="Deseja realmente excluir este animal? Essa ação não pode ser desfeita."
+          textoConfirmar="Sim, excluir"
+          onCancelar={() => setExibindoConfirmacaoExclusao(false)}
+          onConfirmar={confirmarExclusao}
+        />
       </div>
     </div>
   );

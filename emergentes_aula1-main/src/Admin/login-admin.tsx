@@ -65,14 +65,14 @@ export default function LoginAdmin() {
   return (
     <section className="bg-cover min-h-screen">
       <div className="flex flex-col items-center px-6 py-4 mx-auto min-h-screen justify-center sm:justify-start sm:pt-8">
-        <div className="w-full mt-3 bg-white rounded-lg shadow dark:border sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
-          <div className="p-5 space-y-3 sm:p-6">
+        <div className="w-full mt-3 bg-white rounded-lg shadow dark:border sm:max-w-sm xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+          <div className="p-4 space-y-3 sm:p-5">
             <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
               Login de Administrador
             </h1>
             <div>
               <img
-                className="w-40 sm:w-44 mx-auto"
+                className="w-32 sm:w-36 mx-auto"
                 src="/img/gato_admin.png"
                 alt="Gato com capacete de trabalhador"
               />

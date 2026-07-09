@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useClienteStore } from "../context/ClienteContext";
 import { useAdminStore } from "../Admin/context/AdminContext";
 
@@ -98,7 +99,7 @@ export default function Contato() {
 
   async function liberarConversa() {
     if (!contatoSelecionado?.codigoConversa) {
-      alert("Conversa sem código");
+      toast.error("Conversa sem código");
       return;
     }
 
@@ -117,14 +118,14 @@ export default function Contato() {
           const data = await res.json();
 
           if (!res.ok) {
-            alert(data?.erro || "Não foi possível liberar a conversa");
+            toast.error(data?.erro || "Não foi possível liberar a conversa");
             return;
           }
 
           setMensagensLiberadas(data);
         } catch (error) {
           console.error(error);
-          alert("Erro ao liberar conversa");
+          toast.error("Erro ao liberar conversa");
           return;
         }
       }
@@ -133,14 +134,14 @@ export default function Contato() {
       return;
     }
 
-    alert("Código incorreto");
+    toast.error("Código incorreto");
   }
 
   return (
-    <div className="h-[calc(100vh-80px)] bg-gray-100 flex">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-gray-100 md:flex-row">
       {/* SIDEBAR */}
-      <aside className="w-full md:w-1/3 lg:w-1/4 bg-white border-r overflow-y-auto">
-        <h2 className="p-4 text-xl font-bold border-b">Conversas</h2>
+      <aside className="h-[32dvh] w-full overflow-y-auto border-b bg-white md:h-full md:w-1/3 md:border-b-0 md:border-r lg:w-1/4">
+        <h2 className="border-b p-4 text-xl font-bold">Conversas</h2>
 
         {contatos.map((contato) => (
           <div
@@ -151,13 +152,13 @@ export default function Contato() {
               setConversaLiberada(false);
               setMensagensLiberadas([]);
             }}
-            className={`flex gap-3 p-4 cursor-pointer hover:bg-gray-100 ${
+            className={`flex cursor-pointer gap-3 p-4 hover:bg-gray-100 ${
               contatoSelecionado?.id === contato.id ? "bg-gray-200" : ""
             }`}
           >
             <img
               src={contato.animal.urlImagem}
-              className="w-12 h-12 rounded-full object-cover"
+              className="h-12 w-12 rounded-full object-cover"
             />
 
             <div className="flex-1">
@@ -186,16 +187,16 @@ export default function Contato() {
       </aside>
 
       {/* CHAT */}
-      <main className="flex-1 flex flex-col">
+      <main className="flex min-h-0 flex-1 flex-col">
         {!contatoSelecionado ? (
-          <div className="flex flex-1 items-center justify-center text-gray-500">
+          <div className="flex flex-1 items-center justify-center p-6 text-center text-gray-500">
             Selecione uma conversa
           </div>
         ) : (
           <>
             {!conversaLiberada ? (
-              <div className="flex flex-1 items-center justify-center p-6">
-                <div className="w-full max-w-md bg-white border rounded-xl p-6 shadow-sm">
+              <div className="flex flex-1 items-center justify-center p-4 sm:p-6">
+                <div className="w-full max-w-md rounded-xl border bg-white p-5 shadow-sm sm:p-6">
                   <div className="text-sm text-gray-500 mb-2">
                     Conversa bloqueada
                   </div>
@@ -239,24 +240,38 @@ export default function Contato() {
             ) : (
               <>
                 {/* HEADER */}
-                <header className="bg-white border-b p-4 flex items-center gap-4">
-                  <img
-                    src={contatoSelecionado.animal.urlImagem}
-                    className="w-14 h-14 rounded-lg object-cover"
-                  />
-                  <div>
-                    <h3 className="font-bold text-lg">
-                      {contatoSelecionado.animal.nome}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {contatoSelecionado.animal.raca} •{" "}
-                      {contatoSelecionado.animal.cidade}
-                    </p>
+                <header className="flex items-start justify-between gap-4 border-b bg-white p-4">
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={contatoSelecionado.animal.urlImagem}
+                      className="h-14 w-14 rounded-lg object-cover"
+                    />
+                    <div>
+                      <h3 className="font-bold text-lg">
+                        {contatoSelecionado.animal.nome}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {contatoSelecionado.animal.raca} •{" "}
+                        {contatoSelecionado.animal.cidade}
+                      </p>
+                    </div>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      setContatoSelecionado(null);
+                      setConversaLiberada(false);
+                      setCodigoInput("");
+                      setMensagensLiberadas([]);
+                    }}
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Fechar
+                  </button>
                 </header>
 
                 {/* MENSAGENS */}
-                <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+                <div className="flex-1 min-h-0 space-y-4 overflow-y-auto p-3 sm:p-6">
                   {admin?.role === "admin" ? (
                     mensagensLiberadas.map((mensagem) => {
                       const enviadaPorMim = mensagem.remetente.id === admin.id;
@@ -264,7 +279,7 @@ export default function Contato() {
                       return (
                         <div
                           key={mensagem.id}
-                          className={`max-w-lg p-4 rounded-xl ${
+                          className={`max-w-[85%] break-words whitespace-pre-wrap rounded-xl p-4 sm:max-w-lg ${
                             enviadaPorMim
                               ? "ml-auto bg-blue-600 text-white"
                               : "bg-white border"
@@ -288,7 +303,7 @@ export default function Contato() {
                     })
                   ) : (
                     <>
-                      <div className="max-w-lg bg-blue-600 text-white p-4 rounded-xl">
+                      <div className="max-w-[85%] break-words whitespace-pre-wrap rounded-xl bg-blue-600 p-4 text-white sm:max-w-lg">
                         <p>{contatoSelecionado.mensagem}</p>
                         <span className="text-xs opacity-80 block mt-1">
                           {dataDMA(contatoSelecionado.criadoEm)}
@@ -296,7 +311,7 @@ export default function Contato() {
                       </div>
 
                       {contatoSelecionado.resposta && (
-                        <div className="max-w-lg ml-auto bg-gray-300 p-4 rounded-xl">
+                        <div className="max-w-[85%] break-words whitespace-pre-wrap ml-auto rounded-xl bg-gray-300 p-4 sm:max-w-lg">
                           <p>{contatoSelecionado.resposta}</p>
                         </div>
                       )}
@@ -305,11 +320,11 @@ export default function Contato() {
                 </div>
 
                 {/* INPUT (visual apenas por enquanto) */}
-                <footer className="bg-white p-4 border-t">
+                <footer className="border-t bg-white p-3 sm:p-4">
                   <input
                     disabled
                     placeholder="Resposta via sistema (em breve)"
-                    className="w-full p-3 border rounded-lg bg-gray-100"
+                    className="w-full rounded-lg border bg-gray-100 p-3"
                   />
                 </footer>
               </>
