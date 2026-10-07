@@ -19,11 +19,8 @@ export default function Titulo() {
       if (!cliente?.id) return;
 
       try {
-        console.log("Buscando mensagens não lidas para cliente:", cliente.id);
         const res = await fetch(`${apiUrl}/contatos/nao-lidas/${cliente.id}`);
-        console.log("Response status:", res.status);
         const data = await res.json();
-        console.log("Data recebida:", data);
         setMensagensNaoLidas(data.naoLidas || 0);
       } catch (err) {
         console.error("Erro ao buscar mensagens não lidas:", err);
@@ -53,25 +50,34 @@ export default function Titulo() {
     }
   }
 
+  const fecharMenu = () => setMenuAberto(false);
+
   return (
-    <nav className="sticky top-0 z-50 bg-blue-900 shadow-md">
-      <div className="w-full flex items-center justify-between px-8 py-3">
+    <nav className="sticky top-0 z-50 border-b border-white/10 bg-blue-900/95 shadow-lg backdrop-blur">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-2 md:px-8">
         {/* Logo */}
-        <Link to="/" onClick={handleHomeClick} className="flex items-center -ml-10 md:ml-0">
+        <Link
+          to="/"
+          onClick={handleHomeClick}
+          className="flex items-center"
+        >
           <img
             src="/img/logo-novo-white.png"
             alt="Logo Petpel"
-            className="h-16 transition-transform hover:scale-105 "
+            className="h-14 transition-transform hover:scale-105 md:h-16"
           />
         </Link>
 
         {/* Hamburger */}
         <button
+          type="button"
           onClick={() => setMenuAberto(!menuAberto)}
-          className="md:hidden text-white focus:outline-none cursor-pointer"
+          aria-label={menuAberto ? "Fechar menu" : "Abrir menu"}
+          aria-expanded={menuAberto}
+          className="cursor-pointer rounded-lg p-2 text-white transition hover:bg-white/10 focus:outline-none md:hidden"
         >
           <svg
-            className="w-7 h-7"
+            className="h-7 w-7"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -80,7 +86,7 @@ export default function Titulo() {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d="M4 6h16M4 12h16M4 18h16"
+              d={menuAberto ? "M6 6l12 12M18 6L6 18" : "M4 6h16M4 12h16M4 18h16"}
             />
           </svg>
         </button>
@@ -88,28 +94,35 @@ export default function Titulo() {
         {/* Menu */}
         <div
           className={`
-            ${menuAberto ? "block" : "hidden"}
-            md:flex md:items-center md:gap-8
-            absolute md:static top-full left-0 w-full md:w-auto
-            bg-blue-800 md:bg-transparent
-            shadow-md md:shadow-none
+            ${menuAberto ? "block animate-fade-in" : "hidden"}
+            absolute left-0 top-full w-full border-t border-white/10 bg-blue-900 shadow-xl
+            md:static md:flex md:w-auto md:items-center md:border-0 md:bg-transparent md:shadow-none
           `}
         >
-          <ul className="flex flex-col md:flex-row md:items-center gap-2 md:gap-8 px-4 py-4 md:p-0 text-white font-medium">
+          <ul className="flex flex-col gap-1 px-4 py-4 font-medium text-white md:flex-row md:items-center md:gap-2 md:p-0">
             <NavItem
               to="/"
               label="Home"
+              ativo={location.pathname === "/"}
               onClick={() => {
                 handleHomeClick();
-                setMenuAberto(false);
+                fecharMenu();
               }}
+            />
+
+            <NavItem
+              to="/parceiros"
+              label="Parceiros"
+              ativo={location.pathname.startsWith("/parceiros")}
+              onClick={fecharMenu}
             />
 
             {!admin && !cliente && (
               <NavItem
                 to="/login"
                 label="Login"
-                onClick={() => setMenuAberto(false)}
+                ativo={location.pathname === "/login"}
+                onClick={fecharMenu}
               />
             )}
 
@@ -118,28 +131,23 @@ export default function Titulo() {
                 <NavItem
                   to="/inclusao"
                   label="Inclusão"
-                  onClick={() => setMenuAberto(false)}
+                  ativo={location.pathname === "/inclusao"}
+                  onClick={fecharMenu}
                 />
+
                 <li>
                   <Link
                     to="/inbox"
-                    onClick={() => setMenuAberto(false)}
-                    className="
-                      relative
-            
-                      transition
-                    
-                      flex items-center gap-2
-                  
-                      px-2 py-1
-                      
-                      hover:text-blue-200
-                      
-                    "
+                    onClick={fecharMenu}
+                    className={`flex items-center gap-2 rounded-full px-4 py-2 transition hover:bg-white/10 ${
+                      location.pathname === "/inbox"
+                        ? "bg-white/15"
+                        : ""
+                    }`}
                   >
                     Minhas Mensagens
                     {mensagensNaoLidas > 0 && (
-                      <span className="bg-red-500 text-white text-xs font-bold rounded-full h-5 min-w-5 flex items-center justify-center px-1">
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white">
                         {mensagensNaoLidas > 99 ? "99+" : mensagensNaoLidas}
                       </span>
                     )}
@@ -149,21 +157,14 @@ export default function Titulo() {
             )}
 
             {(cliente || admin) && (
-              <li className="flex items-center">
+              <li className="flex items-center md:ml-2">
                 <button
+                  type="button"
                   onClick={() => {
                     handleLogout();
-                    setMenuAberto(false);
+                    fecharMenu();
                   }}
-                  className="
-                    px-4 py-1
-                    rounded-full
-                    bg-white/10
-                    hover:bg-red-600
-                    transition
-                    cursor-pointer
-                    font-medium
-                  "
+                  className="w-full cursor-pointer rounded-full border border-white/30 px-5 py-2 font-medium transition hover:border-red-500 hover:bg-red-600 md:w-auto"
                 >
                   Sair
                 </button>
@@ -180,10 +181,12 @@ export default function Titulo() {
 function NavItem({
   to,
   label,
+  ativo,
   onClick,
 }: {
   to: string;
   label: string;
+  ativo?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -191,21 +194,10 @@ function NavItem({
       <Link
         to={to}
         onClick={onClick}
-        className="
-          relative
-          px-2 py-1
-          transition
-          hover:text-blue-200
-          after:content-['']
-          after:absolute
-          after:left-0
-          after:-bottom-1
-          after:w-0
-          after:h-0.5
-          after:bg-blue-200
-          after:transition-all
-          hover:after:w-full
-        "
+        aria-current={ativo ? "page" : undefined}
+        className={`block rounded-full px-4 py-2 transition hover:bg-white/10 ${
+          ativo ? "bg-white/15" : ""
+        }`}
       >
         {label}
       </Link>

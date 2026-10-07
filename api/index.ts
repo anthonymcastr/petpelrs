@@ -10,6 +10,7 @@ import routesContatos from './routes/propostas'
 import routesLoginAdmin from './routes/login-admin'
 import routesAdmins from './routes/admins'
 import propostasAdmin from './routes/propostasAdmin'
+import routesPetshops from './routes/petshops'
 
 const app = express()
 const port = 3000
@@ -28,6 +29,7 @@ app.use("/clientes/contatos", routesContatos)
 app.use("/login-admin", routesLoginAdmin)
 app.use("/admins", routesAdmins)
 app.use("/admin/contatos", propostasAdmin)
+app.use("/petshops", routesPetshops)
 
 console.log("API URL teste")
 

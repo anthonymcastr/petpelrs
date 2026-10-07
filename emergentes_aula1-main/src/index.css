@@ -1,1 +1,35 @@
-@import "tailwindcss"
+@import "tailwindcss";
+
+/* Cole no final do seu index.css */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* O Inclusao.tsx já usa "animate-fade-in", mas a classe não estava definida */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

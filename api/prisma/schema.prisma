@@ -15,6 +15,15 @@ model Animal {
   urlImagem String
   tipo      TipoAnimal
   cidade    tipoCidade
+
+  // Código do microchip (letras e números). "Não contém" = sem chip
+  chip      String     @default("Não contém")
+
+  // Localização aproximada do animal
+  endereco  String?
+  latitude  Float?
+  longitude Float?
+
   usuarioId Int
   usuario   Cliente    @relation(fields: [usuarioId], references: [id]) // RELAÇÃO PADRÃO
   createdAt DateTime   @default(now())
@@ -65,6 +74,33 @@ model Admin {
   role      String   @default("admin")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Lojas parceiras
+model Petshop {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  descricao String?
+  logoUrl   String?   // imagem do card (logo ou foto da fachada)
+  endereco  String?   // ex: Rua Gonçalves Chaves, 100 - Centro
+  horario   String?   // ex: Seg a Sex, 9h às 18h
+  whatsapp  String    // só números, com DDI e DDD: 5553999999999
+  ativo     Boolean   @default(true)
+  servicos  Servico[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Servico {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  descricao String?
+  preco     Float?   // vazio = "sob consulta"
+  ativo     Boolean  @default(true)
+  petshopId Int
+  petshop   Petshop  @relation(fields: [petshopId], references: [id], onDelete: Cascade)
+
+  @@index([petshopId])
 }
 
 enum TipoAnimal {

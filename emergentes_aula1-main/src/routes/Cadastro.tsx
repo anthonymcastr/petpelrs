@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -28,20 +28,21 @@ function SenhaChecklist({ senha }: { senha: string }) {
   ];
 
   return (
-    <div className="mt-2 space-y-1">
-      {requisitos.map((req, index) => (
-        <div key={index} className="flex items-center gap-2 text-sm">
+    <ul className="mt-3 space-y-1.5 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200/70">
+      {requisitos.map((req) => (
+        <li key={req.label} className="flex items-center gap-2 text-sm">
           <span
-            className={`flex items-center justify-center w-4 h-4 rounded-full transition-colors ${
-              req.valido ? "bg-green-500" : "bg-gray-300"
+            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors ${
+              req.valido ? "bg-emerald-500" : "bg-slate-300"
             }`}
           >
             {req.valido && (
               <svg
-                className="w-3 h-3 text-white"
+                className="h-3 w-3 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -55,15 +56,81 @@ function SenhaChecklist({ senha }: { senha: string }) {
 
           <span
             className={`transition-colors ${
-              req.valido ? "text-green-600" : "text-gray-500"
+              req.valido ? "text-emerald-700" : "text-slate-500"
             }`}
           >
             {req.label}
           </span>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
+}
+
+// Botão de mostrar/ocultar senha
+function BotaoOlho({
+  visivel,
+  onClick,
+  rotulo,
+}: {
+  visivel: boolean;
+  onClick: () => void;
+  rotulo: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute inset-y-0 right-2 my-auto flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+      aria-label={visivel ? `Ocultar ${rotulo}` : `Mostrar ${rotulo}`}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.6}
+        stroke="currentColor"
+        className="h-5 w-5"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
+        />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+        />
+        {visivel && (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l16 16" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+function Rotulo({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="mb-1.5 block text-sm font-medium text-slate-700"
+    >
+      {children} <span className="text-red-500">*</span>
+    </label>
+  );
+}
+
+function Erro({ mensagem }: { mensagem?: string }) {
+  if (!mensagem) return null;
+  return <p className="mt-1.5 text-sm text-red-600">{mensagem}</p>;
 }
 
 export default function Cadastro() {
@@ -78,6 +145,7 @@ export default function Cadastro() {
   const [senhaFocada, setSenhaFocada] = useState(false);
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmacaoSenha, setMostrarConfirmacaoSenha] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   const senha = watch("senha", "");
   const confirmarSenha = watch("confirmarSenha", "");
@@ -120,22 +188,22 @@ export default function Cadastro() {
     return true;
   }
 
-  // Classe dinâmica dos inputs
+  // Classe dinâmica dos inputs (neutro, verde = válido, vermelho = inválido)
   const getInputClass = (fieldName: keyof Inputs, isValid: boolean) => {
     const baseClass =
-      "bg-gray-50 text-gray-900 sm:text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 transition-colors";
+      "w-full rounded-xl bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:outline-2 focus:outline-offset-0";
 
     const touched = touchedFields[fieldName] || dirtyFields[fieldName];
 
     if (!touched) {
-      return `${baseClass} border border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500`;
+      return `${baseClass} border border-slate-300 focus:border-blue-700 focus:outline-blue-200`;
     }
 
     if (isValid) {
-      return `${baseClass} border-2 border-green-500 focus:ring-green-500 focus:border-green-500`;
+      return `${baseClass} border-2 border-emerald-500 focus:outline-emerald-200`;
     }
 
-    return `${baseClass} border-2 border-red-500 focus:ring-red-500 focus:border-red-500`;
+    return `${baseClass} border-2 border-red-500 focus:outline-red-200`;
   };
 
   // Validações
@@ -157,6 +225,8 @@ export default function Cadastro() {
   const confirmarSenhaValida =
     confirmarSenha.length > 0 && confirmarSenha === senha;
 
+  const podeEnviar = senhaValida && confirmarSenhaValida && !enviando;
+
   const onSubmit = async (data: Inputs) => {
     if (!senhaValida) {
       toast.error("A senha não atende todos os requisitos");
@@ -169,6 +239,8 @@ export default function Cadastro() {
     }
 
     const { confirmarSenha: _, ...payload } = data;
+
+    setEnviando(true);
 
     try {
       const response = await fetch(`${apiUrl}/clientes/cadastro`, {
@@ -190,40 +262,67 @@ export default function Cadastro() {
         setTimeout(() => {
           navigate("/login");
         }, 5000);
-      } else {
-        const erro = await response.json();
-        toast.error(erro.error || "Erro no cadastro");
+        // O botão fica bloqueado até o redirecionamento
+        return;
       }
+
+      const erro = await response.json();
+      toast.error(erro.error || "Erro no cadastro");
+      setEnviando(false);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao conectar com o servidor");
+      setEnviando(false);
     }
   };
 
   return (
-    <section className="bg-gray-50 dark:bg-gray-900 min-h-screen flex items-center justify-center">
-      <div className="w-full bg-white rounded-lg shadow dark:border md:max-w-md xl:p-0 my-5 dark:bg-gray-800 dark:border-gray-700">
-        <div className="p-6 space-y-4 md:space-y-6 sm:p-8">
-          <h1 className="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-            Criar Conta
+    <section className="relative flex min-h-[calc(100dvh-5rem)] items-center justify-center overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 px-4 py-10">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-amber-300/10 blur-3xl" />
+
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl lg:grid-cols-5">
+        {/* Painel da marca (só em telas grandes) */}
+        <div className="hidden flex-col justify-between bg-blue-900/95 p-10 text-white lg:col-span-2 lg:flex">
+          <img
+            src="/img/logo-novo-white.png"
+            alt="PetPel RS"
+            className="h-16 w-fit"
+          />
+          <div>
+            <h2 className="text-3xl font-extrabold leading-tight tracking-tight">
+              Crie sua conta e ajude um pet a voltar pra casa.
+            </h2>
+            <p className="mt-4 text-blue-100">
+              Com a conta você cadastra animais perdidos, encontrados ou para
+              adoção e conversa direto com os responsáveis.
+            </p>
+          </div>
+          <p className="text-sm text-blue-200">PetPel RS</p>
+        </div>
+
+        {/* Formulário */}
+        <div className="p-6 sm:p-10 lg:col-span-3">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Criar conta
           </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Preencha seus dados para começar.
+          </p>
 
           <form
-            className="space-y-4 md:space-y-6"
+            className="mt-8 grid gap-5 sm:grid-cols-2"
             onSubmit={handleSubmit(onSubmit)}
+            noValidate
           >
             {/* Nome */}
-            <div>
-              <label
-                htmlFor="nome"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Nome completo <span className="text-red-500">*</span>
-              </label>
+            <div className="sm:col-span-2">
+              <Rotulo htmlFor="nome">Nome completo</Rotulo>
 
               <input
                 type="text"
                 id="nome"
+                autoComplete="name"
                 placeholder="Ex: João Silva Santos"
                 {...register("nome", {
                   required: "Nome é obrigatório",
@@ -235,25 +334,17 @@ export default function Cadastro() {
                 className={getInputClass("nome", nomeValido)}
               />
 
-              {errors.nome && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.nome.message}
-                </p>
-              )}
+              <Erro mensagem={errors.nome?.message} />
             </div>
 
             {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                E-mail <span className="text-red-500">*</span>
-              </label>
+            <div className="sm:col-span-2">
+              <Rotulo htmlFor="email">E-mail</Rotulo>
 
               <input
                 type="email"
                 id="email"
+                autoComplete="email"
                 placeholder="Ex: joao@email.com"
                 {...register("email", {
                   required: "E-mail é obrigatório",
@@ -265,25 +356,17 @@ export default function Cadastro() {
                 className={getInputClass("email", emailValido)}
               />
 
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.email.message}
-                </p>
-              )}
+              <Erro mensagem={errors.email?.message} />
             </div>
 
             {/* Telefone */}
             <div>
-              <label
-                htmlFor="telefone"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Telefone <span className="text-red-500">*</span>
-              </label>
+              <Rotulo htmlFor="telefone">Telefone</Rotulo>
 
               <input
                 type="tel"
                 id="telefone"
+                autoComplete="tel"
                 placeholder="Ex: (53) 99999-9999"
                 {...register("telefone", {
                   required: "Telefone é obrigatório",
@@ -295,25 +378,17 @@ export default function Cadastro() {
                 className={getInputClass("telefone", telefoneValido)}
               />
 
-              {errors.telefone && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.telefone.message}
-                </p>
-              )}
+              <Erro mensagem={errors.telefone?.message} />
             </div>
 
             {/* CPF */}
             <div>
-              <label
-                htmlFor="cpf"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                CPF <span className="text-red-500">*</span>
-              </label>
+              <Rotulo htmlFor="cpf">CPF</Rotulo>
 
               <input
                 type="text"
                 id="cpf"
+                inputMode="numeric"
                 placeholder="Ex: 123.456.789-09"
                 {...register("cpf", {
                   required: "CPF é obrigatório",
@@ -324,26 +399,18 @@ export default function Cadastro() {
                 maxLength={14}
               />
 
-              {errors.cpf && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.cpf.message}
-                </p>
-              )}
+              <Erro mensagem={errors.cpf?.message} />
             </div>
 
             {/* Senha */}
-            <div>
-              <label
-                htmlFor="senha"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Senha <span className="text-red-500">*</span>
-              </label>
+            <div className="sm:self-start">
+              <Rotulo htmlFor="senha">Senha</Rotulo>
 
               <div className="relative">
                 <input
                   type={mostrarSenha ? "text" : "password"}
                   id="senha"
+                  autoComplete="new-password"
                   placeholder="Digite uma senha forte"
                   {...register("senha", {
                     required: "Senha é obrigatória",
@@ -352,61 +419,14 @@ export default function Cadastro() {
                   className={`${getInputClass("senha", senhaValida)} pr-12`}
                 />
 
-                <button
-                  type="button"
+                <BotaoOlho
+                  visivel={mostrarSenha}
                   onClick={() => setMostrarSenha((valor) => !valor)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                >
-                  {mostrarSenha ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.98 8.223A10.477 10.477 0 0112 4.5c4.135 0 7.863 2.123 10.02 5.723a.75.75 0 010 .554A10.477 10.477 0 0112 19.5c-4.135 0-7.863-2.123-10.02-5.723a.75.75 0 010-.554z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  )}
-                </button>
+                  rotulo="senha"
+                />
               </div>
 
-              {errors.senha && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.senha.message}
-                </p>
-              )}
+              <Erro mensagem={errors.senha?.message} />
 
               {(senhaFocada || senha.length > 0) && (
                 <SenhaChecklist senha={senha} />
@@ -414,18 +434,14 @@ export default function Cadastro() {
             </div>
 
             {/* Confirmação de senha */}
-            <div>
-              <label
-                htmlFor="confirmarSenha"
-                className="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Confirmação de senha <span className="text-red-500">*</span>
-              </label>
+            <div className="sm:self-start">
+              <Rotulo htmlFor="confirmarSenha">Confirmação de senha</Rotulo>
 
               <div className="relative">
                 <input
                   type={mostrarConfirmacaoSenha ? "text" : "password"}
                   id="confirmarSenha"
+                  autoComplete="new-password"
                   placeholder="Digite a senha novamente"
                   {...register("confirmarSenha", {
                     required: "Confirmação de senha é obrigatória",
@@ -438,97 +454,77 @@ export default function Cadastro() {
                   )} pr-12`}
                 />
 
-                <button
-                  type="button"
+                <BotaoOlho
+                  visivel={mostrarConfirmacaoSenha}
                   onClick={() => setMostrarConfirmacaoSenha((valor) => !valor)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                  aria-label={
-                    mostrarConfirmacaoSenha
-                      ? "Ocultar confirmação de senha"
-                      : "Mostrar confirmação de senha"
-                  }
-                >
-                  {mostrarConfirmacaoSenha ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.98 8.223A10.477 10.477 0 0112 4.5c4.135 0 7.863 2.123 10.02 5.723a.75.75 0 010 .554A10.477 10.477 0 0112 19.5c-4.135 0-7.863-2.123-10.02-5.723a.75.75 0 010-.554z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="w-5 h-5"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z"
-                      />
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                      />
-                    </svg>
-                  )}
-                </button>
+                  rotulo="confirmação de senha"
+                />
               </div>
 
-              {errors.confirmarSenha && (
-                <p className="text-red-500 text-sm mt-1">
-                  {errors.confirmarSenha.message}
-                </p>
-              )}
+              <Erro mensagem={errors.confirmarSenha?.message} />
             </div>
 
-            {/* Aviso */}
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              <span className="text-red-500">*</span> Todos os campos são
-              obrigatórios
-            </p>
+            {/* Aviso + botão */}
+            <div className="sm:col-span-2">
+              <p className="mb-4 text-sm text-slate-500">
+                <span className="text-red-500">*</span> Todos os campos são
+                obrigatórios.
+              </p>
 
-            {/* Botão */}
-            <button
-              type="submit"
-              disabled={!senhaValida || !confirmarSenhaValida}
-              className={`w-full text-white font-medium rounded-lg py-2.5 transition ${
-                senhaValida && confirmarSenhaValida
-                  ? "bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-            >
-              Cadastrar
-            </button>
-
-            {/* Login */}
-            <p className="text-sm text-center text-gray-500 dark:text-gray-400">
-              Já tem uma conta?{" "}
-              <a
-                href="/login"
-                className="text-blue-600 hover:underline dark:text-blue-400"
+              <button
+                type="submit"
+                disabled={!podeEnviar}
+                className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold text-white transition ${
+                  podeEnviar
+                    ? "cursor-pointer bg-blue-900 shadow-lg shadow-blue-900/20 hover:bg-blue-800"
+                    : "cursor-not-allowed bg-slate-400"
+                }`}
               >
-                Faça login!
-              </a>
-            </p>
+                {enviando && (
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      opacity="0.25"
+                    />
+                    <path
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                )}
+                {enviando ? "Cadastrando..." : "Cadastrar"}
+              </button>
+
+              {!senhaValida || !confirmarSenhaValida ? (
+                <p className="mt-2 text-center text-xs text-slate-500">
+                  O botão libera quando a senha cumprir todos os requisitos e a
+                  confirmação for igual.
+                </p>
+              ) : null}
+            </div>
           </form>
+
+          <p className="mt-8 text-center text-sm text-slate-500">
+            Já tem uma conta?{" "}
+            <Link
+              to="/login"
+              className="font-semibold text-blue-900 hover:underline"
+            >
+              Faça login
+            </Link>
+          </p>
         </div>
       </div>
     </section>

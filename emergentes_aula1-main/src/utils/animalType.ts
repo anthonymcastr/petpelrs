@@ -10,6 +10,12 @@ export type AnimalBase = {
   tipo: "ADOCAO" | "ENCONTRADO" | "PERDIDO"
   cidade: string
   usuarioId: number
+  // "Não contém" quando o animal não tem chip
+  chip: string
+  // Localização aproximada (null em animais cadastrados antes desse recurso)
+  endereco?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 // Tipo para listagem: usuário opcional (nem sempre vem do backend)
@@ -23,4 +29,3 @@ export type AnimalComUsuario = AnimalBase & {
 }
 
 export type AnimalType = Animal | AnimalComUsuario
-

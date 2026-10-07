@@ -1,11 +1,38 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import type { Animal, AnimalComUsuario } from "../utils/animalType";
 import { CardAnimal } from "../components/CardAnimal";
 import { CardExpandido } from "../components/CardExpandido";
 import { ConfirmacaoExclusao } from "../components/ConfirmacaoExclusao";
 import { InputPesquisa } from "../components/InputPesquisa";
+import { Carrossel } from "../components/Carrossel";
 import { useAdminStore } from "../Admin/context/AdminContext";
+
+// Classes escritas por extenso: o Tailwind não gera cores montadas com `bg-${cor}-600`
+const FILTROS = [
+  {
+    tipo: "PERDIDO",
+    label: "Perdidos",
+    ativo: "bg-red-600 text-white border-red-600",
+    inativo:
+      "text-red-100 border-red-300/60 hover:bg-red-600/90 hover:text-white",
+  },
+  {
+    tipo: "ENCONTRADO",
+    label: "Encontrados",
+    ativo: "bg-emerald-600 text-white border-emerald-600",
+    inativo:
+      "text-emerald-100 border-emerald-300/60 hover:bg-emerald-600/90 hover:text-white",
+  },
+  {
+    tipo: "ADOCAO",
+    label: "Para adoção",
+    ativo: "bg-white text-blue-900 border-white",
+    inativo:
+      "text-blue-100 border-blue-200/60 hover:bg-white hover:text-blue-900",
+  },
+];
 
 export default function Listagem() {
   const [animais, setAnimais] = useState<Animal[]>([]);
@@ -16,6 +43,8 @@ export default function Listagem() {
   const [animalParaExcluir, setAnimalParaExcluir] = useState<number | null>(
     null,
   );
+  const [visao, setVisao] = useState<"carrossel" | "grade">("carrossel");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { admin } = useAdminStore();
   const isAdmin = admin?.role === "admin";
@@ -62,11 +91,22 @@ export default function Listagem() {
     }
   };
 
+  // 🔹 Link compartilhado (?animal=ID) abre o card direto
+  useEffect(() => {
+    const id = Number(searchParams.get("animal"));
+    if (id) handleVerDetalhes(id);
+  }, []);
+
+  const fecharCard = () => {
+    setCardSelecionado(null);
+    if (searchParams.has("animal")) setSearchParams({});
+  };
+
   // 🔹 Remover animal da lista local
   const handleExcluido = (id: number) => {
     setAnimais((prev) => prev.filter((a) => a.id !== id));
     setAnimaisOriginais((prev) => prev.filter((a) => a.id !== id));
-    if (cardSelecionado?.id === id) setCardSelecionado(null);
+    if (cardSelecionado?.id === id) fecharCard();
   };
 
   // 🔹 Exclusão admin
@@ -105,89 +145,105 @@ export default function Listagem() {
     }
   };
 
+  // 🔹 Cards prontos para o carrossel ou para a grade
+  const cards = animais.map((animal) => (
+    <CardAnimal
+      key={animal.id}
+      data={animal}
+      onFazerContato={() => handleVerDetalhes(animal.id)}
+      isAdmin={isAdmin}
+      onExcluir={excluirAnimal}
+    />
+  ));
+
   return (
-    <div className="min-h-screen">
-      {/* Filtros */}
-      <section className="max-w-7xl mx-auto px-4 pt-8">
-        <InputPesquisa
-          setAnimais={(dados) => {
-            setAnimais(dados);
-            setAnimaisOriginais(dados);
-            setTipoAtivo(null);
-          }}
-        />
-        <div className="flex justify-center gap-2 sm:gap-3 mt-6 flex-wrap">
-          {[
-            { tipo: "PERDIDO", label: "Perdidos", cor: "red" },
-            { tipo: "ENCONTRADO", label: "Encontrados", cor: "green" },
-            { tipo: "ADOCAO", label: "Para Adoção", cor: "blue" },
-          ].map((btn) => (
-            <button
-              key={btn.tipo}
-              onClick={() => filtrarPorTipo(btn.tipo)}
-              className={`px-3 sm:px-4 py-2 rounded-full font-semibold text-sm sm:text-base cursor-pointer transition ${
-                tipoAtivo === btn.tipo
-                  ? `bg-${btn.cor}-600 text-white`
-                  : `bg-${btn.cor}-500 text-white hover:bg-${btn.cor}-700`
-              }`}
-            >
-              {btn.label}
-            </button>
-          ))}
+    <div className="min-h-screen bg-slate-50">
+      {/* Hero */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-blue-950 via-blue-900 to-blue-700 px-4 pb-16 pt-14 text-center text-white">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -left-20 h-72 w-72 rounded-full bg-amber-300/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-3xl">
+          <h1 className="text-4xl font-extrabold tracking-tight md:text-6xl">
+            Todo pet merece voltar pra casa
+          </h1>
+          <p className="mx-auto mt-4 max-w-xl text-base text-blue-100 md:text-lg">
+            Animais perdidos, encontrados e para adoção em Pelotas, num só lugar.
+          </p>
+
+          <div className="mt-8 rounded-3xl bg-white/10 p-2 ring-1 ring-white/20 backdrop-blur">
+            <InputPesquisa
+              setAnimais={(dados) => {
+                setAnimais(dados);
+                setAnimaisOriginais(dados);
+                setTipoAtivo(null);
+              }}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-center gap-2 sm:gap-3">
+            {FILTROS.map((f) => (
+              <button
+                key={f.tipo}
+                type="button"
+                onClick={() => filtrarPorTipo(f.tipo)}
+                aria-pressed={tipoAtivo === f.tipo}
+                className={`cursor-pointer rounded-full border px-4 py-2 text-sm font-semibold transition sm:text-base ${
+                  tipoAtivo === f.tipo ? f.ativo : f.inativo
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </section>
+      </header>
 
-      {/* Título */}
-      <section className="text-center mt-10 px-4">
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900">
-          Encontre seu{" "}
-          <span className="underline underline-offset-4 decoration-blue-700">
-            Pet
-          </span>
-        </h1>
-        <p className="mt-2 text-gray-800">
-          Animais perdidos, encontrados e para adoção em Pelotas
-        </p>
-      </section>
-
-      {/* Grid ou detalhe */}
-      <section className="flex justify-center px-4 mt-12 pb-16">
+      {/* Carrossel, grade ou detalhe */}
+      <section className="flex justify-center px-4 mt-8 pb-16">
         {cardSelecionado ? (
           <CardExpandido
             animal={cardSelecionado}
-            onClose={() => setCardSelecionado(null)}
+            onClose={fecharCard}
             onExcluido={() =>
               cardSelecionado && handleExcluido(cardSelecionado.id)
             }
           />
         ) : (
-          <div
-            className="
-              grid
-              w-full
-              max-w-7xl
-              gap-6
-              mx-auto
-              pb-2
-              [grid-template-columns:repeat(auto-fit,minmax(250px,320px))]
-              justify-center
-            "
-          >
-            {animais.length > 0 ? (
-              animais.map((animal) => (
-                <div key={animal.id} className="w-full max-w-[320px]">
-                  <CardAnimal
-                    data={animal}
-                    onFazerContato={() => handleVerDetalhes(animal.id)}
-                    isAdmin={isAdmin}
-                    onExcluir={excluirAnimal}
-                  />
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 text-center w-full col-span-full">
+          <div className="w-full">
+            <div className="mx-auto mb-2 flex max-w-7xl items-center justify-between px-2 md:px-12">
+              <p className="text-sm font-medium text-slate-600">
+                {animais.length} {animais.length === 1 ? "animal" : "animais"}
+              </p>
+
+              <div className="inline-flex rounded-full bg-white p-1 text-sm font-semibold shadow ring-1 ring-slate-200">
+                {(["carrossel", "grade"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setVisao(v)}
+                    className={`cursor-pointer rounded-full px-4 py-1.5 capitalize transition ${
+                      visao === v
+                        ? "bg-blue-900 text-white"
+                        : "text-slate-600 hover:text-blue-900"
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {animais.length === 0 ? (
+              <p className="py-16 text-center text-gray-500">
                 Nenhum animal encontrado
               </p>
+            ) : visao === "carrossel" ? (
+              <Carrossel>{cards}</Carrossel>
+            ) : (
+              <div className="mx-auto grid max-w-7xl justify-center gap-6 pt-6 [grid-template-columns:repeat(auto-fit,minmax(250px,300px))]">
+                {cards}
+              </div>
             )}
           </div>
         )}
