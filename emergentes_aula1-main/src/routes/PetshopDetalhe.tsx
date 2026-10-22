@@ -71,7 +71,10 @@ export default function PetshopDetalhe() {
     [petshop, selecionados],
   );
 
-  const totalEstimado = escolhidos.reduce((soma, s) => soma + (s.preco ?? 0), 0);
+  const totalEstimado = escolhidos.reduce(
+    (soma, s) => soma + (s.preco ?? 0),
+    0,
+  );
   const temSobConsulta = escolhidos.some((s) => s.preco == null);
 
   function alternar(servicoId: number) {
@@ -95,7 +98,9 @@ export default function PetshopDetalhe() {
     }
 
     setEnviandoOrcamento(true);
-    const janelaWhatsapp = enviarPorWhatsapp ? window.open("about:blank", "_blank") : null;
+    const janelaWhatsapp = enviarPorWhatsapp
+      ? window.open("about:blank", "_blank")
+      : null;
 
     if (enviarPorWhatsapp && !janelaWhatsapp) {
       setEnviandoOrcamento(false);
@@ -140,17 +145,22 @@ export default function PetshopDetalhe() {
         }),
       });
       const dados = await resposta.json();
-      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível enviar o orçamento");
+      if (!resposta.ok)
+        throw new Error(dados.erro || "Não foi possível enviar o orçamento");
 
       const url = `https://wa.me/${numeroWhatsapp(petshop.whatsapp)}?text=${encodeURIComponent(partes.join("\n"))}`;
 
       if (janelaWhatsapp) janelaWhatsapp.location.href = url;
-      toast.success("Pedido enviado! A confirmação foi enviada para seu e-mail.");
+      toast.success(
+        "Pedido enviado! A confirmação foi enviada para seu e-mail.",
+      );
       setMostrarConfirmacao(false);
       navigate("/orcamentos");
     } catch (error) {
       janelaWhatsapp?.close();
-      toast.error(error instanceof Error ? error.message : "Erro ao enviar orçamento");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao enviar orçamento",
+      );
     } finally {
       setEnviandoOrcamento(false);
     }
@@ -333,7 +343,8 @@ export default function PetshopDetalhe() {
                 htmlFor="observacao"
                 className="mb-1.5 block text-sm font-medium text-slate-700"
               >
-                Observações <span className="font-normal text-slate-400">(opcional)</span>
+                Observações{" "}
+                <span className="font-normal text-slate-400">(opcional)</span>
               </label>
               <textarea
                 id="observacao"
@@ -365,8 +376,12 @@ export default function PetshopDetalhe() {
                       : "serviços selecionados"}
                   </p>
                   <p className="text-slate-500">
-                    {totalEstimado > 0 ? `Estimado: ${brl(totalEstimado)}` : "Valor sob consulta"}
-                    {totalEstimado > 0 && temSobConsulta && " + itens sob consulta"}
+                    {totalEstimado > 0
+                      ? `Estimado: ${brl(totalEstimado)}`
+                      : "Valor sob consulta"}
+                    {totalEstimado > 0 &&
+                      temSobConsulta &&
+                      " + itens sob consulta"}
                   </p>
                 </>
               )}
@@ -385,21 +400,74 @@ export default function PetshopDetalhe() {
       )}
 
       {mostrarConfirmacao && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 px-4 py-6" onClick={() => !enviandoOrcamento && setMostrarConfirmacao(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Confirmar orçamento" className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
-            <h2 className="text-2xl font-black text-slate-900">Confirmar orçamento</h2>
-            <p className="mt-2 text-sm text-slate-600">Confira os serviços selecionados antes de enviar para {petshop.nome}.</p>
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 px-4 py-6"
+          onClick={() => !enviandoOrcamento && setMostrarConfirmacao(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmar orçamento"
+            className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-2xl font-black text-slate-900">
+              Confirmar orçamento
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Confira os serviços selecionados antes de enviar para{" "}
+              {petshop.nome}.
+            </p>
             <ul className="mt-5 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-              {escolhidos.map((servico) => <li key={servico.id} className="flex justify-between gap-3"><span>{servico.nome}</span><strong>{servico.preco != null ? brl(servico.preco) : "Sob consulta"}</strong></li>)}
+              {escolhidos.map((servico) => (
+                <li key={servico.id} className="flex justify-between gap-3">
+                  <span>{servico.nome}</span>
+                  <strong>
+                    {servico.preco != null
+                      ? brl(servico.preco)
+                      : "Sob consulta"}
+                  </strong>
+                </li>
+              ))}
             </ul>
-            {observacao.trim() && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><strong>Observação:</strong> {observacao.trim()}</p>}
+            {observacao.trim() && (
+              <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">
+                <strong>Observação:</strong> {observacao.trim()}
+              </p>
+            )}
             <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 text-sm text-slate-700">
-              <input type="checkbox" checked={enviarPorWhatsapp} onChange={(event) => setEnviarPorWhatsapp(event.target.checked)} className="mt-0.5 h-4 w-4 accent-green-600" />
-              <span><strong>Enviar solicitação também via WhatsApp</strong><span className="mt-1 block text-slate-500">A mensagem incluirá os serviços e o cupom #PETPELRS.</span></span>
+              <input
+                type="checkbox"
+                checked={enviarPorWhatsapp}
+                onChange={(event) => setEnviarPorWhatsapp(event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-green-600"
+              />
+              <span>
+                <strong>Enviar solicitação também via WhatsApp</strong>
+                <span className="mt-1 block text-slate-500">
+                  A mensagem incluirá os serviços e o cupom #PETPELRS.
+                </span>
+              </span>
             </label>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setMostrarConfirmacao(false)} disabled={enviandoOrcamento} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
-              <button type="button" onClick={confirmarEnvio} disabled={enviandoOrcamento} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60">{enviandoOrcamento ? "Enviando..." : "Confirmar e enviar orçamento"}</button>
+              <button
+                type="button"
+                onClick={() => setMostrarConfirmacao(false)}
+                disabled={enviandoOrcamento}
+                className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={confirmarEnvio}
+                disabled={enviandoOrcamento}
+                className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60"
+              >
+                {enviandoOrcamento
+                  ? "Enviando..."
+                  : "Confirmar e enviar orçamento"}
+              </button>
             </div>
           </div>
         </div>

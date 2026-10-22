@@ -59,14 +59,21 @@ export function CardPetshop({ petshop }: Props) {
         </h3>
 
         <div className="mt-1 flex items-center gap-2 text-sm">
-          <span className="text-amber-400" aria-label={`${(petshop.avaliacaoMedia || 0).toFixed(1)} de 5 estrelas`}>
+          <span
+            className="text-amber-400"
+            aria-label={`${(petshop.avaliacaoMedia || 0).toFixed(1)} de 5 estrelas`}
+          >
             {"★".repeat(Math.round(petshop.avaliacaoMedia || 0))}
-            <span className="text-slate-200">{"★".repeat(5 - Math.round(petshop.avaliacaoMedia || 0))}</span>
+            <span className="text-slate-200">
+              {"★".repeat(5 - Math.round(petshop.avaliacaoMedia || 0))}
+            </span>
           </span>
           <span className="font-semibold text-slate-600">
             {(petshop.avaliacaoMedia || 0).toFixed(1)}
           </span>
-          <span className="text-slate-400">({petshop.totalAvaliacoes || 0})</span>
+          <span className="text-slate-400">
+            ({petshop.totalAvaliacoes || 0})
+          </span>
         </div>
 
         {petshop.descricao && (

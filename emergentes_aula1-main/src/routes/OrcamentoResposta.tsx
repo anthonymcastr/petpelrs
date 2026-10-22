@@ -44,33 +44,56 @@ export default function OrcamentoResposta() {
       });
       const dados = await res.json();
       if (!res.ok) throw new Error(dados.erro || "Erro ao enviar resposta");
-      setOrcamento((atual) => atual ? { ...atual, status: "RESPONDIDO", resposta: dados.resposta } : atual);
+      setOrcamento((atual) =>
+        atual
+          ? { ...atual, status: "RESPONDIDO", resposta: dados.resposta }
+          : atual,
+      );
       toast.success("Resposta enviada ao cliente");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao responder orçamento");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao responder orçamento",
+      );
     } finally {
       setEnviando(false);
     }
   }
 
-  if (carregando) return <p className="p-8 text-center">Carregando orçamento...</p>;
-  if (!orcamento) return <p className="p-8 text-center">Orçamento não encontrado.</p>;
+  if (carregando)
+    return <p className="p-8 text-center">Carregando orçamento...</p>;
+  if (!orcamento)
+    return <p className="p-8 text-center">Orçamento não encontrado.</p>;
 
-  const servicos = JSON.parse(orcamento.servicosJson) as { nome: string; preco?: number | null }[];
+  const servicos = JSON.parse(orcamento.servicosJson) as {
+    nome: string;
+    preco?: number | null;
+  }[];
 
   return (
     <main className="mx-auto min-h-[70vh] max-w-2xl px-4 py-10">
       <section className="rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200 md:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-700">PetPel RS</p>
-        <h1 className="mt-2 text-3xl font-black text-slate-900">Responder orçamento</h1>
+        <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-700">
+          PetPel RS
+        </p>
+        <h1 className="mt-2 text-3xl font-black text-slate-900">
+          Responder orçamento
+        </h1>
         <p className="mt-2 text-slate-600">Cliente: {orcamento.cliente.nome}</p>
-        <p className="font-semibold text-slate-900">Petshop: {orcamento.petshop.nome}</p>
+        <p className="font-semibold text-slate-900">
+          Petshop: {orcamento.petshop.nome}
+        </p>
 
         <ul className="mt-6 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-          {servicos.map((servico) => <li key={servico.nome}>{servico.nome}</li>)}
+          {servicos.map((servico) => (
+            <li key={servico.nome}>{servico.nome}</li>
+          ))}
         </ul>
 
-        {orcamento.observacao && <p className="mt-4 text-sm text-slate-600">Observação: {orcamento.observacao}</p>}
+        {orcamento.observacao && (
+          <p className="mt-4 text-sm text-slate-600">
+            Observação: {orcamento.observacao}
+          </p>
+        )}
 
         {orcamento.status === "RESPONDIDO" ? (
           <div className="mt-6 rounded-2xl bg-emerald-50 p-4 text-emerald-800">

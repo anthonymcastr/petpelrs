@@ -59,11 +59,7 @@ export default function Titulo() {
     <nav className="sticky top-0 z-50 border-b border-white/10 bg-blue-900/95 shadow-lg backdrop-blur">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-2 md:px-8">
         {/* Logo */}
-        <Link
-          to="/"
-          onClick={handleHomeClick}
-          className="flex items-center"
-        >
+        <Link to="/" onClick={handleHomeClick} className="flex items-center">
           <img
             src="/img/logo-novo-white.png"
             alt="Logo Petpel"
@@ -89,7 +85,9 @@ export default function Titulo() {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              d={menuAberto ? "M6 6l12 12M18 6L6 18" : "M4 6h16M4 12h16M4 18h16"}
+              d={
+                menuAberto ? "M6 6l12 12M18 6L6 18" : "M4 6h16M4 12h16M4 18h16"
+              }
             />
           </svg>
         </button>
@@ -143,9 +141,7 @@ export default function Titulo() {
                     to="/inbox"
                     onClick={fecharMenu}
                     className={`flex items-center gap-2 rounded-full px-4 py-2 transition hover:bg-white/10 ${
-                      location.pathname === "/inbox"
-                        ? "bg-white/15"
-                        : ""
+                      location.pathname === "/inbox" ? "bg-white/15" : ""
                     }`}
                   >
                     Minhas Mensagens

@@ -49,7 +49,7 @@ model Cliente {
   contatosEnviados         Contato[]                 @relation("ContatoRemetente")
   contatosRecebidos        Contato[]                 @relation("ContatoDestinatario")
   solicitacoesArquivamento SolicitacaoArquivamento[]
-  orcamentos              Orcamento[]
+  orcamentos               Orcamento[]
 }
 
 model Contato {
@@ -104,25 +104,25 @@ model SolicitacaoArquivamento {
 
 // Lojas parceiras
 model Petshop {
-  id        Int       @id @default(autoincrement())
-  nome      String
-  descricao String?
-  logoUrl   String? // imagem do card (logo ou foto da fachada)
-  endereco  String? // ex: Rua Gonçalves Chaves, 100 - Centro
-  horario   String? // ex: Seg a Sex, 9h às 18h
+  id                Int         @id @default(autoincrement())
+  nome              String
+  descricao         String?
+  logoUrl           String? // imagem do card (logo ou foto da fachada)
+  endereco          String? // ex: Rua Gonçalves Chaves, 100 - Centro
+  horario           String? // ex: Seg a Sex, 9h às 18h
   diasFuncionamento String?
-  latitude  Float?
-  longitude Float?
-  whatsapp  String // só números, com DDI e DDD: 5553999999999
-  email     String? @unique
-  senha     String?
-  ativo     Boolean   @default(true)
-  servicos  Servico[]
-  orcamentos Orcamento[]
-  avaliacaoMedia Float @default(0)
-  totalAvaliacoes Int @default(0)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  latitude          Float?
+  longitude         Float?
+  whatsapp          String // só números, com DDI e DDD: 5553999999999
+  email             String?     @unique
+  senha             String?
+  ativo             Boolean     @default(true)
+  servicos          Servico[]
+  orcamentos        Orcamento[]
+  avaliacaoMedia    Float       @default(0)
+  totalAvaliacoes   Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 }
 
 model Servico {
@@ -138,20 +138,20 @@ model Servico {
 }
 
 model Orcamento {
-  id             Int              @id @default(autoincrement())
-  token          String           @unique
-  observacao     String?
-  servicosJson   String
-  totalEstimado  Float?
-  resposta       String?
-  status         StatusOrcamento  @default(SOLICITACAO_ABERTA)
-  avaliacaoNota  Int?
+  id                  Int             @id @default(autoincrement())
+  token               String          @unique
+  observacao          String?
+  servicosJson        String
+  totalEstimado       Float?
+  resposta            String?
+  status              StatusOrcamento @default(SOLICITACAO_ABERTA)
+  avaliacaoNota       Int?
   avaliacaoComentario String?
-  avaliadoEm     DateTime?
-  criadoEm       DateTime         @default(now())
-  atualizadoEm   DateTime         @updatedAt
-  petshopId      Int
-  clienteId      Int
+  avaliadoEm          DateTime?
+  criadoEm            DateTime        @default(now())
+  atualizadoEm        DateTime        @updatedAt
+  petshopId           Int
+  clienteId           Int
 
   petshop Petshop @relation(fields: [petshopId], references: [id], onDelete: Cascade)
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)

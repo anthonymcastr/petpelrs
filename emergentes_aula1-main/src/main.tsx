@@ -42,7 +42,10 @@ const rotas = createBrowserRouter([
           { path: "inbox", element: <Inbox /> },
           { path: "parceiros", element: <Parceiros /> },
           { path: "parceiros/:id", element: <PetshopDetalhe /> },
-          { path: "orcamentos/responder/:token", element: <OrcamentoResposta /> },
+          {
+            path: "orcamentos/responder/:token",
+            element: <OrcamentoResposta />,
+          },
           { path: "orcamentos", element: <MeusOrcamentos /> },
           { path: "login-petshop", element: <LoginPetshop /> },
           { path: "cadastro-petshop", element: <CadastroPetshop /> },

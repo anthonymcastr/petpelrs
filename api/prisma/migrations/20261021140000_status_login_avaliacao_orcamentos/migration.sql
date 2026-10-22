@@ -1,13 +1,23 @@
 ALTER TABLE "Petshop" ADD COLUMN "senha" TEXT;
-ALTER TABLE "Petshop" ADD COLUMN "avaliacaoMedia" DOUBLE PRECISION NOT NULL DEFAULT 0;
-ALTER TABLE "Petshop" ADD COLUMN "totalAvaliacoes" INTEGER NOT NULL DEFAULT 0;
-CREATE UNIQUE INDEX "Petshop_email_key" ON "Petshop"("email");
+
+ALTER TABLE "Petshop"
+ADD COLUMN "avaliacaoMedia" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+ALTER TABLE "Petshop"
+ADD COLUMN "totalAvaliacoes" INTEGER NOT NULL DEFAULT 0;
+
+CREATE UNIQUE INDEX "Petshop_email_key" ON "Petshop" ("email");
 
 ALTER TYPE "StatusOrcamento" RENAME VALUE 'PENDENTE' TO 'SOLICITACAO_ABERTA';
+
 ALTER TYPE "StatusOrcamento" RENAME VALUE 'RESPONDIDO' TO 'SERVICO_AGENDADO';
+
 ALTER TYPE "StatusOrcamento" ADD VALUE 'FINALIZADO';
+
 ALTER TYPE "StatusOrcamento" ADD VALUE 'CANCELADO';
 
 ALTER TABLE "Orcamento" ADD COLUMN "avaliacaoNota" INTEGER;
+
 ALTER TABLE "Orcamento" ADD COLUMN "avaliacaoComentario" TEXT;
+
 ALTER TABLE "Orcamento" ADD COLUMN "avaliadoEm" TIMESTAMP(3);
