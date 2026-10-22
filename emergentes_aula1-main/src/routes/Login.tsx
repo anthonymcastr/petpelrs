@@ -240,6 +240,15 @@ export default function Login() {
               Cadastre-se
             </Link>
           </p>
+          <p className="mt-3 text-center text-sm text-slate-500">
+            Tem uma loja?{" "}
+            <Link
+              to="/cadastro-petshop"
+              className="font-semibold text-emerald-700 hover:underline"
+            >
+              Seja um parceiro, cadastre sua loja!
+            </Link>
+          </p>
         </div>
       </div>
     </section>

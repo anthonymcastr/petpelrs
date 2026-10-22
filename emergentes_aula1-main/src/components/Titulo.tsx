@@ -1,11 +1,13 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useClienteStore } from "../context/ClienteContext";
 import { useAdminStore } from "../Admin/context/AdminContext";
+import { usePetshopStore } from "../context/PetshopContext";
 import { useState, useEffect } from "react";
 
 export default function Titulo() {
   const { cliente, deslogaCliente } = useClienteStore();
   const { admin, deslogaAdmin } = useAdminStore();
+  const { petshop, sair: sairPetshop } = usePetshopStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuAberto, setMenuAberto] = useState(false);
@@ -40,6 +42,7 @@ export default function Titulo() {
   function handleLogout() {
     deslogaCliente();
     deslogaAdmin();
+    sairPetshop();
     navigate("/login");
   }
 
@@ -117,7 +120,7 @@ export default function Titulo() {
               onClick={fecharMenu}
             />
 
-            {!admin && !cliente && (
+            {!admin && !cliente && !petshop && (
               <NavItem
                 to="/login"
                 label="Login"
@@ -152,6 +155,36 @@ export default function Titulo() {
                       </span>
                     )}
                   </Link>
+                </li>
+              </>
+            )}
+
+            {cliente && !admin && (
+              <NavItem
+                to="/orcamentos"
+                label="Meus orçamentos"
+                onClick={() => setMenuAberto(false)}
+              />
+            )}
+
+            {petshop && (
+              <>
+                <NavItem
+                  to="/minha-loja"
+                  label="Minha loja"
+                  onClick={() => setMenuAberto(false)}
+                />
+                <li className="flex items-center">
+                  <button
+                    onClick={() => {
+                      sairPetshop();
+                      setMenuAberto(false);
+                      navigate("/login-petshop");
+                    }}
+                    className="rounded-full bg-white/10 px-4 py-1 font-medium transition hover:bg-red-600"
+                  >
+                    Sair da loja
+                  </button>
                 </li>
               </>
             )}

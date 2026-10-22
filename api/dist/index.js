@@ -15,6 +15,8 @@ const admins_1 = __importDefault(require("./routes/admins"));
 const propostasAdmin_1 = __importDefault(require("./routes/propostasAdmin"));
 const petshops_1 = __importDefault(require("./routes/petshops"));
 const arquivamento_1 = __importDefault(require("./routes/arquivamento"));
+const orcamentos_1 = __importDefault(require("./routes/orcamentos"));
+const login_petshop_1 = __importDefault(require("./routes/login-petshop"));
 const app = (0, express_1.default)();
 const port = 3000;
 app.use(express_1.default.json());
@@ -31,6 +33,8 @@ app.use("/admins", admins_1.default);
 app.use("/admin/contatos", propostasAdmin_1.default);
 app.use("/petshops", petshops_1.default);
 app.use("/arquivamento", arquivamento_1.default);
+app.use("/orcamentos", orcamentos_1.default);
+app.use("/login-petshop", login_petshop_1.default);
 console.log("API URL teste");
 app.get('/', (req, res) => {
     res.send('API: Cadastro de Animais');

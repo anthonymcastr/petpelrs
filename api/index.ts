@@ -12,6 +12,8 @@ import routesAdmins from './routes/admins'
 import propostasAdmin from './routes/propostasAdmin'
 import routesPetshops from './routes/petshops'
 import routesArquivamento from './routes/arquivamento'
+import routesOrcamentos from './routes/orcamentos'
+import routesLoginPetshop from './routes/login-petshop'
 
 const app = express()
 const port = 3000
@@ -32,6 +34,8 @@ app.use("/admins", routesAdmins)
 app.use("/admin/contatos", propostasAdmin)
 app.use("/petshops", routesPetshops)
 app.use("/arquivamento", routesArquivamento)
+app.use("/orcamentos", routesOrcamentos)
+app.use("/login-petshop", routesLoginPetshop)
 
 console.log("API URL teste")
 

@@ -1,0 +1,1 @@
+ALTER TABLE "Petshop" ADD COLUMN "diasFuncionamento" TEXT;

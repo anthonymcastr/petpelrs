@@ -14,6 +14,13 @@ import Inbox from "./routes/Inbox.tsx";
 import AdminArquivamentos from "./Admin/AdminArquivamentos.tsx";
 import Parceiros from "./routes/Parceiros.tsx";
 import PetshopDetalhe from "./routes/PetshopDetalhe.tsx";
+import OrcamentoResposta from "./routes/OrcamentoResposta.tsx";
+import AdminPetshops from "./Admin/AdminPetshops.tsx";
+import AdminOrcamentos from "./Admin/AdminOrcamentos.tsx";
+import LoginPetshop from "./routes/LoginPetshop.tsx";
+import MeusOrcamentos from "./routes/MeusOrcamentos.tsx";
+import MinhaLoja from "./routes/MinhaLoja.tsx";
+import CadastroPetshop from "./routes/CadastroPetshop.tsx";
 
 import Layout from "./Layout.tsx";
 import AdminLayout from "./Admin/AdminLayout.tsx";
@@ -35,6 +42,11 @@ const rotas = createBrowserRouter([
           { path: "inbox", element: <Inbox /> },
           { path: "parceiros", element: <Parceiros /> },
           { path: "parceiros/:id", element: <PetshopDetalhe /> },
+          { path: "orcamentos/responder/:token", element: <OrcamentoResposta /> },
+          { path: "orcamentos", element: <MeusOrcamentos /> },
+          { path: "login-petshop", element: <LoginPetshop /> },
+          { path: "cadastro-petshop", element: <CadastroPetshop /> },
+          { path: "minha-loja", element: <MinhaLoja /> },
           { path: "sobre", element: <Sobre /> },
           { path: "login", element: <Login /> },
           { path: "cadastro", element: <Cadastro /> },
@@ -49,6 +61,8 @@ const rotas = createBrowserRouter([
           { path: "listagem", element: <Listagem /> },
           { path: "contato", element: <Contato /> },
           { path: "arquivamentos", element: <AdminArquivamentos /> },
+          { path: "petshops", element: <AdminPetshops /> },
+          { path: "orcamentos", element: <AdminOrcamentos /> },
         ],
       },
     ],

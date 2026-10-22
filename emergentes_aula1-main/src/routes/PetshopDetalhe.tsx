@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { PetshopType } from "../utils/petshopType";
+import { useClienteStore } from "../context/ClienteContext";
+import { Localizacao } from "../components/Localizacao";
 
 const brl = (valor: number) =>
   valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -35,6 +39,11 @@ export default function PetshopDetalhe() {
   const [naoEncontrada, setNaoEncontrada] = useState(false);
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [observacao, setObservacao] = useState("");
+  const [enviandoOrcamento, setEnviandoOrcamento] = useState(false);
+  const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
+  const [enviarPorWhatsapp, setEnviarPorWhatsapp] = useState(true);
+  const { cliente } = useClienteStore();
+  const navigate = useNavigate();
 
   const apiUrl = import.meta.env.VITE_API_URL;
 
@@ -73,8 +82,28 @@ export default function PetshopDetalhe() {
     );
   }
 
-  function enviarWhatsapp() {
+  function abrirConfirmacao() {
     if (!petshop || escolhidos.length === 0) return;
+    setMostrarConfirmacao(true);
+  }
+
+  async function confirmarEnvio() {
+    if (!petshop || escolhidos.length === 0) return;
+    if (!cliente?.token) {
+      toast.error("Entre na sua conta para receber a confirmação por e-mail");
+      return;
+    }
+
+    setEnviandoOrcamento(true);
+    const janelaWhatsapp = enviarPorWhatsapp ? window.open("about:blank", "_blank") : null;
+
+    if (enviarPorWhatsapp && !janelaWhatsapp) {
+      setEnviandoOrcamento(false);
+      toast.error("Permita pop-ups para abrir o WhatsApp");
+      return;
+    }
+
+    if (janelaWhatsapp) janelaWhatsapp.document.title = "Abrindo WhatsApp...";
 
     const linhas = escolhidos.map(
       (s) => `• ${s.nome} (${s.preco != null ? brl(s.preco) : "sob consulta"})`,
@@ -90,13 +119,41 @@ export default function PetshopDetalhe() {
       partes.push("", `Observações: ${observacao.trim()}`);
     }
 
-    partes.push("", "Poderiam me passar valores e horários disponíveis? Obrigado!");
+    partes.push(
+      "",
+      "Poderiam me passar valores e horários disponíveis? Obrigado!",
+      "",
+      "Cupom: #PETPELRS",
+    );
 
-    const url = `https://wa.me/${numeroWhatsapp(petshop.whatsapp)}?text=${encodeURIComponent(
-      partes.join("\n"),
-    )}`;
+    try {
+      const resposta = await fetch(`${apiUrl}/orcamentos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cliente.token}`,
+        },
+        body: JSON.stringify({
+          petshopId: petshop.id,
+          servicoIds: escolhidos.map((servico) => servico.id),
+          observacao: observacao.trim() || undefined,
+        }),
+      });
+      const dados = await resposta.json();
+      if (!resposta.ok) throw new Error(dados.erro || "Não foi possível enviar o orçamento");
 
-    window.open(url, "_blank", "noopener,noreferrer");
+      const url = `https://wa.me/${numeroWhatsapp(petshop.whatsapp)}?text=${encodeURIComponent(partes.join("\n"))}`;
+
+      if (janelaWhatsapp) janelaWhatsapp.location.href = url;
+      toast.success("Pedido enviado! A confirmação foi enviada para seu e-mail.");
+      setMostrarConfirmacao(false);
+      navigate("/orcamentos");
+    } catch (error) {
+      janelaWhatsapp?.close();
+      toast.error(error instanceof Error ? error.message : "Erro ao enviar orçamento");
+    } finally {
+      setEnviandoOrcamento(false);
+    }
   }
 
   if (carregando) {
@@ -165,6 +222,16 @@ export default function PetshopDetalhe() {
             {petshop.descricao && (
               <p className="mt-2 text-slate-600">{petshop.descricao}</p>
             )}
+
+            <div className="mt-5">
+              <Localizacao
+                nome={petshop.nome}
+                urlImagem={petshop.logoUrl || ""}
+                latitude={petshop.latitude}
+                longitude={petshop.longitude}
+                variante="botao"
+              />
+            </div>
 
             <div className="mt-5 space-y-3 text-sm text-slate-700">
               {petshop.endereco && (
@@ -307,13 +374,33 @@ export default function PetshopDetalhe() {
 
             <button
               type="button"
-              onClick={enviarWhatsapp}
-              disabled={escolhidos.length === 0}
-              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-3 font-semibold text-white shadow-lg shadow-green-900/20 transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+              onClick={abrirConfirmacao}
+              disabled={escolhidos.length === 0 || enviandoOrcamento}
+              className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-900 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-900/20 transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
             >
-              <img src="/img/logozap.png" alt="" className="h-5 w-5" />
-              Enviar pelo WhatsApp
+              {enviandoOrcamento ? "Enviando pedido..." : "Enviar orçamento"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {mostrarConfirmacao && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 px-4 py-6" onClick={() => !enviandoOrcamento && setMostrarConfirmacao(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Confirmar orçamento" className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <h2 className="text-2xl font-black text-slate-900">Confirmar orçamento</h2>
+            <p className="mt-2 text-sm text-slate-600">Confira os serviços selecionados antes de enviar para {petshop.nome}.</p>
+            <ul className="mt-5 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+              {escolhidos.map((servico) => <li key={servico.id} className="flex justify-between gap-3"><span>{servico.nome}</span><strong>{servico.preco != null ? brl(servico.preco) : "Sob consulta"}</strong></li>)}
+            </ul>
+            {observacao.trim() && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><strong>Observação:</strong> {observacao.trim()}</p>}
+            <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-200 p-4 text-sm text-slate-700">
+              <input type="checkbox" checked={enviarPorWhatsapp} onChange={(event) => setEnviarPorWhatsapp(event.target.checked)} className="mt-0.5 h-4 w-4 accent-green-600" />
+              <span><strong>Enviar solicitação também via WhatsApp</strong><span className="mt-1 block text-slate-500">A mensagem incluirá os serviços e o cupom #PETPELRS.</span></span>
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setMostrarConfirmacao(false)} disabled={enviandoOrcamento} className="rounded-xl border border-slate-300 px-5 py-3 font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button type="button" onClick={confirmarEnvio} disabled={enviandoOrcamento} className="rounded-xl bg-blue-900 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:opacity-60">{enviandoOrcamento ? "Enviando..." : "Confirmar e enviar orçamento"}</button>
+            </div>
           </div>
         </div>
       )}

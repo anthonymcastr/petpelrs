@@ -49,6 +49,7 @@ model Cliente {
   contatosEnviados         Contato[]                 @relation("ContatoRemetente")
   contatosRecebidos        Contato[]                 @relation("ContatoDestinatario")
   solicitacoesArquivamento SolicitacaoArquivamento[]
+  orcamentos              Orcamento[]
 }
 
 model Contato {
@@ -109,9 +110,17 @@ model Petshop {
   logoUrl   String? // imagem do card (logo ou foto da fachada)
   endereco  String? // ex: Rua Gonçalves Chaves, 100 - Centro
   horario   String? // ex: Seg a Sex, 9h às 18h
+  diasFuncionamento String?
+  latitude  Float?
+  longitude Float?
   whatsapp  String // só números, com DDI e DDD: 5553999999999
+  email     String? @unique
+  senha     String?
   ativo     Boolean   @default(true)
   servicos  Servico[]
+  orcamentos Orcamento[]
+  avaliacaoMedia Float @default(0)
+  totalAvaliacoes Int @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -128,6 +137,30 @@ model Servico {
   @@index([petshopId])
 }
 
+model Orcamento {
+  id             Int              @id @default(autoincrement())
+  token          String           @unique
+  observacao     String?
+  servicosJson   String
+  totalEstimado  Float?
+  resposta       String?
+  status         StatusOrcamento  @default(SOLICITACAO_ABERTA)
+  avaliacaoNota  Int?
+  avaliacaoComentario String?
+  avaliadoEm     DateTime?
+  criadoEm       DateTime         @default(now())
+  atualizadoEm   DateTime         @updatedAt
+  petshopId      Int
+  clienteId      Int
+
+  petshop Petshop @relation(fields: [petshopId], references: [id], onDelete: Cascade)
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([petshopId])
+  @@index([clienteId])
+  @@index([status])
+}
+
 enum TipoAnimal {
   ADOCAO
   PERDIDO
@@ -142,4 +175,11 @@ enum StatusSolicitacaoArquivamento {
   PENDENTE
   APROVADA
   RECUSADA
+}
+
+enum StatusOrcamento {
+  SOLICITACAO_ABERTA
+  SERVICO_AGENDADO
+  FINALIZADO
+  CANCELADO
 }
