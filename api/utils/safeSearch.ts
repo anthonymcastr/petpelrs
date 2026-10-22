@@ -1,22 +1,32 @@
-import axios from 'axios';
-
 const API_USER = process.env.SIGHTENGINE_USER;
 const API_SECRET = process.env.SIGHTENGINE_SECRET;
 
-export async function verificaImagemSegura(url: string) {
-  console.log("Chamando Sightengine para:", url); // <-- LOG INÍCIO
+const MODELOS =
+  'nudity-2.1,weapon,recreational_drug,medical,offensive-2.0,faces,face-age,gore-2.0,text,qr-content,tobacco,violence,self-harm,money,gambling';
 
-  const response = await axios.get('https://api.sightengine.com/1.0/check.json', {
-    params: {
-      url,
-      models: 'nudity-2.1,weapon,recreational_drug,medical,offensive-2.0,faces,face-age,gore-2.0,text,qr-content,tobacco,violence,self-harm,money,gambling',
-      api_user: API_USER,
-      api_secret: API_SECRET,
-    },
+// Recebe os bytes da foto enviada (upload) e manda direto para o Sightengine.
+export async function verificaImagemSegura(imagem: Buffer, mimetype = 'image/jpeg') {
+  console.log("Chamando Sightengine para upload de", imagem.length, "bytes"); // <-- LOG INÍCIO
+
+  const form = new FormData();
+  form.append('media', new Blob([new Uint8Array(imagem)], { type: mimetype }), 'foto');
+  form.append('models', MODELOS);
+  form.append('api_user', API_USER ?? '');
+  form.append('api_secret', API_SECRET ?? '');
+
+  const resposta = await fetch('https://api.sightengine.com/1.0/check.json', {
+    method: 'POST',
+    body: form,
+    signal: AbortSignal.timeout(20000),
   });
 
-  const result = response.data;
+  const result: any = await resposta.json();
   console.log("Sightengine result:", JSON.stringify(result, null, 2)); // <-- LOG RESULTADO
+
+  // Se o serviço falhou, não dá para afirmar que a foto é segura: não deixa passar.
+  if (!resposta.ok || result.status !== 'success') {
+    throw new Error(`Sightengine falhou: ${result?.error?.message ?? resposta.status}`);
+  }
 
   // Critérios PESADOS de bloqueio: bloqueia qualquer nudez, erotismo, sugestividade, armas, drogas, gore, ofensa, violência, etc.
   const improprio =

@@ -1,9 +1,10 @@
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Animal } from "../utils/animalType";
 import { useClienteStore } from "../context/ClienteContext";
+import { prepararFoto, tamanhoLegivel } from "../utils/imagem";
 
 const campo =
   "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-blue-700 focus:outline-2 focus:outline-offset-0 focus:outline-blue-200";
@@ -75,20 +76,23 @@ export default function Inclusao() {
   const navigate = useNavigate();
   const [alerta, setAlerta] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [imagemComErro, setImagemComErro] = useState(false);
+  const [foto, setFoto] = useState<File | null>(null);
+  const [previa, setPrevia] = useState<string | null>(null);
+  const [erroFoto, setErroFoto] = useState<string | null>(null);
+  const [processandoFoto, setProcessandoFoto] = useState(false);
+  const [arrastando, setArrastando] = useState(false);
+  const inputArquivo = useRef<HTMLInputElement>(null);
+  const inputCamera = useRef<HTMLInputElement>(null);
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<Animal>();
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const urlImagem = watch("urlImagem");
-  const urlValida = !!urlImagem && /^https?:\/\//.test(urlImagem);
 
   // 🔒 Preenche automaticamente o ID do usuário logado
   useEffect(() => {
@@ -97,24 +101,62 @@ export default function Inclusao() {
     }
   }, [cliente, setValue]);
 
-  // Zera o erro da prévia sempre que a URL muda
+  // Prévia da foto escolhida (a URL temporária é liberada quando a foto muda)
   useEffect(() => {
-    setImagemComErro(false);
-  }, [urlImagem]);
+    if (!foto) {
+      setPrevia(null);
+      return;
+    }
+    const url = URL.createObjectURL(foto);
+    setPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [foto]);
+
+  async function escolherFoto(arquivo?: File | null) {
+    if (!arquivo) return;
+    setErroFoto(null);
+    setProcessandoFoto(true);
+    try {
+      setFoto(await prepararFoto(arquivo));
+    } catch (error) {
+      setErroFoto(
+        error instanceof Error ? error.message : "Não foi possível usar essa foto.",
+      );
+    } finally {
+      setProcessandoFoto(false);
+    }
+  }
 
   function aguardar(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async function onSubmit(data: Animal) {
+    if (!foto) {
+      setErroFoto("Envie uma foto do animal");
+      return;
+    }
+
     const inicio = Date.now();
     setCarregando(true);
 
     try {
+      // Envio como formulário (multipart) para poder levar o arquivo da foto
+      const formData = new FormData();
+      formData.append("tipo", data.tipo);
+      formData.append("nome", data.nome);
+      formData.append("raca", data.raca);
+      formData.append("idade", String(data.idade));
+      formData.append("cidade", data.cidade);
+      formData.append("usuarioId", String(data.usuarioId));
+      if (data.chip?.trim()) formData.append("chip", data.chip.trim());
+      if (data.endereco?.trim()) formData.append("endereco", data.endereco.trim());
+      formData.append("foto", foto, foto.name);
+
+      // Sem "Content-Type": o navegador define sozinho, com o separador do multipart
       const resp = await fetch(`${API_URL}/animais`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: formData,
       });
 
       if (!resp.ok) {
@@ -122,7 +164,9 @@ export default function Inclusao() {
         const msg =
           typeof corpo.erro === "string"
             ? corpo.erro
-            : "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão.";
+            : resp.status === 413
+              ? "A foto é grande demais. Tente outra imagem."
+              : "Não foi possível cadastrar o animal. Tente novamente.";
         setAlerta(msg);
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
@@ -138,6 +182,7 @@ export default function Inclusao() {
         duration: 4000,
       });
       reset();
+      setFoto(null);
       navigate("/"); // volta pra listagem (home)
     } catch (error) {
       console.error(error);
@@ -369,39 +414,129 @@ export default function Inclusao() {
 
           {/* Coluna da foto */}
           <div className="md:col-span-2">
-            <Rotulo htmlFor="urlImagem">Link da foto</Rotulo>
-            <input
-              id="urlImagem"
-              {...register("urlImagem", {
-                required: "URL obrigatória",
-                pattern: {
-                  value: /^https?:\/\//,
-                  message: "URL inválida",
-                },
-              })}
-              className={campo}
-              placeholder="https://..."
-            />
-            <Erro mensagem={errors.urlImagem?.message} />
+            <Rotulo>Foto do animal</Rotulo>
 
-            <div className="mt-4 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
-              {urlValida && !imagemComErro ? (
+            {/* Os inputs ficam escondidos; os botões abaixo é que os acionam */}
+            <input
+              ref={inputArquivo}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => {
+                escolherFoto(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+            <input
+              ref={inputCamera}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden="true"
+              onChange={(e) => {
+                escolherFoto(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setArrastando(true);
+              }}
+              onDragLeave={() => setArrastando(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setArrastando(false);
+                escolherFoto(e.dataTransfer.files?.[0]);
+              }}
+              className={`flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition ${
+                arrastando
+                  ? "border-blue-700 bg-blue-50"
+                  : erroFoto
+                    ? "border-red-400 bg-red-50"
+                    : "border-slate-300 bg-slate-50"
+              }`}
+            >
+              {processandoFoto ? (
+                <p className="px-6 text-center text-sm text-slate-500">
+                  Preparando a foto...
+                </p>
+              ) : previa ? (
                 <img
-                  src={urlImagem}
+                  src={previa}
                   alt="Prévia da foto do animal"
-                  onError={() => setImagemComErro(true)}
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <p className="px-6 text-center text-sm text-slate-500">
-                  {imagemComErro
-                    ? "Não foi possível carregar essa imagem. Confira o link."
-                    : "A prévia da foto aparece aqui depois que você colar o link."}
-                </p>
+                <div className="px-6 text-center">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.6}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mx-auto h-10 w-10 text-slate-400"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 8a2 2 0 012-2h1.5l1-1.5h7l1 1.5H18a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V8z" />
+                    <circle cx="12" cy="12.5" r="3.5" />
+                  </svg>
+                  <p className="mt-3 text-sm text-slate-500">
+                    <span className="hidden md:inline">
+                      Arraste uma foto até aqui ou use o botão abaixo.
+                    </span>
+                    <span className="md:hidden">
+                      Tire uma foto agora ou escolha uma da galeria.
+                    </span>
+                  </p>
+                </div>
               )}
             </div>
 
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => inputArquivo.current?.click()}
+                disabled={processandoFoto || carregando}
+                className="cursor-pointer rounded-xl border border-blue-900 px-4 py-2.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {foto ? "Trocar foto" : "Escolher foto"}
+              </button>
+              <button
+                type="button"
+                onClick={() => inputCamera.current?.click()}
+                disabled={processandoFoto || carregando}
+                className="cursor-pointer rounded-xl border border-blue-900 px-4 py-2.5 text-sm font-semibold text-blue-900 transition hover:bg-blue-900 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 md:hidden"
+              >
+                Tirar foto
+              </button>
+              {foto && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFoto(null);
+                    setErroFoto(null);
+                  }}
+                  disabled={carregando}
+                  className="cursor-pointer rounded-xl border border-red-200 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Remover
+                </button>
+              )}
+            </div>
+
+            <Erro mensagem={erroFoto ?? undefined} />
+
             <p className="mt-3 text-xs text-slate-500">
+              {foto
+                ? `${foto.name} · ${tamanhoLegivel(foto.size)}. `
+                : "JPG, PNG ou WebP. A foto é reduzida automaticamente. "}
               São permitidas apenas fotos de animais.
             </p>
           </div>

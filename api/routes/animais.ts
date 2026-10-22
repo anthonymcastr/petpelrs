@@ -4,6 +4,8 @@ import { z, ZodError } from "zod"
 import { autentica, AuthRequest } from "../middleware/autentica"
 import { enviarEmail } from "../utils/email"
 import { verificaImagemSegura } from "../utils/safeSearch"
+import { enviarImagem } from "../utils/armazenamento"
+import { receberFoto, tipoDaImagem, type TipoImagem } from "../utils/uploadFoto"
 
 const prisma = new PrismaClient()
 const router = Router()
@@ -13,12 +15,11 @@ const router = Router()
 // ========================
 const animalSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve possuir, no mínimo, 2 caracteres" }),
-  idade: z.number().min(0, { message: "Idade deve ser um número positivo" }),
+  idade: z.coerce.number().min(0, { message: "Idade deve ser um número positivo" }),
   raca: z.string().min(2, { message: "Espécie deve possuir, no mínimo, 2 caracteres" }),
-  urlImagem: z.string().min(5, { message: "URL da imagem deve possuir, no mínimo, 5 caracteres" }),
   tipo: z.enum(["ADOCAO", "PERDIDO", "ENCONTRADO"]),
   cidade: z.enum(["PELOTAS"]),
-  usuarioId: z.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
+  usuarioId: z.coerce.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
   chip: z.string().optional().nullable(),
   endereco: z.string().optional().nullable()
 })
@@ -129,6 +130,31 @@ async function resolverLocalizacao(enderecoBruto?: string | null): Promise<Local
 }
 
 // ========================
+// FOTO (upload)
+// ========================
+class FotoInvalida extends Error {}
+
+// Confere formato e conteúdo da foto. Devolve o tipo real da imagem.
+async function validarFoto(foto: Express.Multer.File): Promise<TipoImagem> {
+  const tipoImagem = tipoDaImagem(foto.buffer)
+  if (!tipoImagem) {
+    throw new FotoInvalida("Formato de imagem não suportado. Use JPG, PNG ou WebP.")
+  }
+
+  // Verificação automática de imagem imprópria
+  const imagemSegura = await verificaImagemSegura(foto.buffer, tipoImagem)
+  if (!imagemSegura) {
+    console.log("Imagem bloqueada pelo safeSearch!")
+    throw new FotoInvalida(
+      "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão."
+    )
+  }
+  console.log("Imagem passou pelo safeSearch!")
+
+  return tipoImagem
+}
+
+// ========================
 // INCLUDE USUARIO PADRÃO
 // ========================
 const includeUsuario = {
@@ -209,18 +235,14 @@ router.get("/:id", async (req, res) => {
 // ========================
 // POST - CRIAR ANIMAL
 // ========================
-router.post("/", async (req, res) => {
-  // LOG da URL recebida
-  if (req.body && req.body.urlImagem) {
-    console.log("URL da imagem recebida:", req.body.urlImagem)
-  } else {
-    console.log("Nenhuma urlImagem recebida no body!")
-  }
-
+router.post("/", receberFoto, async (req, res) => {
   const valida = animalSchema.safeParse(req.body)
   if (!valida.success) return res.status(400).json({ erro: primeiroErro(valida.error) })
 
-  const { nome, idade, raca, urlImagem, tipo, cidade, usuarioId, chip, endereco } = valida.data
+  const { nome, idade, raca, tipo, cidade, usuarioId, chip, endereco } = valida.data
+
+  const foto = req.file
+  if (!foto) return res.status(400).json({ erro: "Envie uma foto do animal." })
 
   // Chip: padroniza e confere se já existe
   const chipPreparado = prepararChip(chip)
@@ -235,16 +257,12 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ erro: "Erro ao verificar o chip" })
   }
 
-  // Verificação automática de imagem imprópria
+  // Formato + verificação automática de imagem imprópria
+  let tipoImagem: TipoImagem
   try {
-    const imagemSegura = await verificaImagemSegura(urlImagem)
-    if (!imagemSegura) {
-      console.log("Imagem bloqueada pelo safeSearch!")
-      return res.status(400).json({ erro: "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão." })
-    } else {
-      console.log("Imagem passou pelo safeSearch!")
-    }
+    tipoImagem = await validarFoto(foto)
   } catch (err) {
+    if (err instanceof FotoInvalida) return res.status(400).json({ erro: err.message })
     console.error("Erro ao verificar imagem no Sightengine:", err)
     return res.status(500).json({ erro: "Erro ao verificar imagem. Tente novamente mais tarde." })
   }
@@ -258,6 +276,15 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ erro: err.message })
     }
     console.warn("Serviço de geolocalização indisponível, cadastrando sem localização:", err)
+  }
+
+  // Só guarda a foto depois de tudo validado (evita arquivo órfão se algo falhar antes)
+  let urlImagem: string
+  try {
+    urlImagem = await enviarImagem(foto.buffer, tipoImagem)
+  } catch (err) {
+    console.error("Erro ao salvar a foto:", err)
+    return res.status(500).json({ erro: "Erro ao salvar a foto. Tente novamente mais tarde." })
   }
 
   try {
@@ -322,12 +349,12 @@ router.post("/", async (req, res) => {
 // ========================
 // PUT - ATUALIZAR ANIMAL
 // ========================
-router.put("/:id", autentica, async (req: AuthRequest, res) => {
+router.put("/:id", autentica, receberFoto, async (req: AuthRequest, res) => {
   const { id } = req.params
   const valida = animalSchema.safeParse(req.body)
   if (!valida.success) return res.status(400).json({ erro: primeiroErro(valida.error) })
 
-  const { nome, idade, raca, urlImagem, tipo, cidade, usuarioId, chip, endereco } = valida.data
+  const { nome, idade, raca, tipo, cidade, usuarioId, chip, endereco } = valida.data
 
   try {
     const animal = await prisma.animal.findUnique({ where: { id: Number(id) } })
@@ -362,9 +389,22 @@ router.put("/:id", autentica, async (req: AuthRequest, res) => {
       }
     }
 
+    // Foto: só troca se uma nova foi enviada; senão mantém a atual
+    let dadosFoto: { urlImagem?: string } = {}
+    if (req.file) {
+      try {
+        const tipoImagem = await validarFoto(req.file)
+        dadosFoto = { urlImagem: await enviarImagem(req.file.buffer, tipoImagem) }
+      } catch (err) {
+        if (err instanceof FotoInvalida) return res.status(400).json({ erro: err.message })
+        console.error("Erro ao processar a nova foto:", err)
+        return res.status(500).json({ erro: "Erro ao processar a foto. Tente novamente mais tarde." })
+      }
+    }
+
     const atualizado = await prisma.animal.update({
       where: { id: Number(id) },
-      data: { nome, idade, raca, urlImagem, tipo, cidade, usuarioId, ...dadosChip, ...dadosLocalizacao },
+      data: { nome, idade, raca, tipo, cidade, usuarioId, ...dadosFoto, ...dadosChip, ...dadosLocalizacao },
       include: includeUsuario,
     })
 
