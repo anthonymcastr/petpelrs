@@ -1,0 +1,40 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const cors_1 = __importDefault(require("cors"));
+const animais_1 = __importDefault(require("./routes/animais"));
+const pesquisa_1 = __importDefault(require("./routes/pesquisa"));
+const clientes_1 = __importDefault(require("./routes/clientes"));
+const login_1 = __importDefault(require("./routes/login"));
+const propostas_1 = __importDefault(require("./routes/propostas"));
+const login_admin_1 = __importDefault(require("./routes/login-admin"));
+const admins_1 = __importDefault(require("./routes/admins"));
+const propostasAdmin_1 = __importDefault(require("./routes/propostasAdmin"));
+const petshops_1 = __importDefault(require("./routes/petshops"));
+const arquivamento_1 = __importDefault(require("./routes/arquivamento"));
+const app = (0, express_1.default)();
+const port = 3000;
+app.use(express_1.default.json());
+app.use((0, cors_1.default)());
+app.use("/animais", animais_1.default);
+app.use("/pesquisa", pesquisa_1.default);
+app.use("/login", login_1.default);
+app.use("/clientes/login", login_1.default);
+app.use("/clientes", clientes_1.default);
+app.use("/contatos", propostas_1.default);
+app.use("/clientes/contatos", propostas_1.default);
+app.use("/login-admin", login_admin_1.default);
+app.use("/admins", admins_1.default);
+app.use("/admin/contatos", propostasAdmin_1.default);
+app.use("/petshops", petshops_1.default);
+app.use("/arquivamento", arquivamento_1.default);
+console.log("API URL teste");
+app.get('/', (req, res) => {
+    res.send('API: Cadastro de Animais');
+});
+app.listen(port, () => {
+    console.log(`Servidor rodando na porta: ${port}`);
+});

@@ -146,7 +146,7 @@ const includeUsuario = {
 // ========================
 router.get("/", async (req, res) => {
   try {
-    const animais = await prisma.animal.findMany({ include: includeUsuario })
+    const animais = await prisma.animal.findMany({ where: { arquivado: false }, include: includeUsuario })
     res.status(200).json(animais)
   } catch (error) {
     console.error(error)
@@ -167,6 +167,7 @@ router.get("/pesquisa", async (req, res) => {
   try {
     const resultados = await prisma.animal.findMany({
       where: {
+        arquivado: false,
         OR: [
           { nome: { contains: termo, mode: "insensitive" } },
           { raca: { contains: termo, mode: "insensitive" } },
@@ -192,7 +193,7 @@ router.get("/:id", async (req, res) => {
   const { id } = req.params
   try {
     const animal = await prisma.animal.findUnique({
-      where: { id: Number(id) },
+      where: { id: Number(id), arquivado: false },
       include: includeUsuario,
     })
 

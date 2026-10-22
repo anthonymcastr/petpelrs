@@ -1,6 +1,10 @@
+import { useState } from "react";
+import { toast } from "sonner";
 import type { Animal } from "../utils/animalType";
 import { Compartilhar } from "./Compartilhar";
 import { Localizacao } from "./Localizacao";
+import { useClienteStore } from "../context/ClienteContext";
+import { useAdminStore } from "../Admin/context/AdminContext";
 
 type CardAnimalProps = {
   data: Animal;
@@ -40,6 +44,12 @@ export function CardAnimal({
   onExcluir,
   isAdmin,
 }: CardAnimalProps) {
+  const { cliente } = useClienteStore();
+  const { admin } = useAdminStore();
+  const [abrirSolicitacao, setAbrirSolicitacao] = useState(false);
+  const [descricao, setDescricao] = useState("");
+  const [enviandoSolicitacao, setEnviandoSolicitacao] = useState(false);
+
   const tipo = tipoConfig[data.tipo] ?? {
     label: data.tipo,
     badge: "bg-gray-600",
@@ -47,6 +57,131 @@ export function CardAnimal({
 
   const chip = data.chip || "Não contém";
   const temChip = chip !== "Não contém";
+  const ehDono =
+    Number(cliente?.id) === Number(data.usuario?.id ?? data.usuarioId);
+  const podeSolicitarArquivamento = ehDono || isAdmin;
+
+  const solicitarArquivamento = async () => {
+    console.info("[arquivamento] Clique no botão", {
+      animalId: data.id,
+      animalTipo: data.tipo,
+      clienteId: cliente?.id,
+      temTokenCliente: Boolean(cliente?.token),
+      adminId: admin?.id,
+      temTokenAdmin: Boolean(admin?.token),
+      ehDono,
+      isAdmin: Boolean(isAdmin),
+    });
+    if (isAdmin) {
+      if (!window.confirm(`Arquivar ${data.nome} agora?`)) return;
+
+      try {
+        setEnviandoSolicitacao(true);
+        const endpoint = `${import.meta.env.VITE_API_URL}/arquivamento/animais/${data.id}`;
+        console.info("[arquivamento] Admin enviando solicitação direta", {
+          endpoint,
+          animalId: data.id,
+          adminId: admin?.id,
+        });
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${admin?.token || ""}`,
+          },
+          body: JSON.stringify({
+            descricao: "Arquivamento realizado diretamente pelo administrador.",
+          }),
+        });
+        const corpo = await res.text();
+        let resposta: { erro?: string } = {};
+        try {
+          resposta = corpo ? JSON.parse(corpo) : {};
+        } catch {
+          console.error("[arquivamento] API retornou corpo não JSON", {
+            corpo,
+          });
+        }
+        console.info("[arquivamento] Resposta do admin", {
+          status: res.status,
+          ok: res.ok,
+          corpo: resposta,
+        });
+        if (!res.ok)
+          throw new Error(resposta.erro || `Falha HTTP ${res.status}`);
+        toast.success("Animal arquivado com sucesso");
+        setAbrirSolicitacao(false);
+      } catch (error) {
+        console.error("[arquivamento] Falha no envio direto do admin", error);
+        toast.error(
+          error instanceof Error ? error.message : "Erro ao arquivar animal",
+        );
+      } finally {
+        setEnviandoSolicitacao(false);
+      }
+      return;
+    }
+
+    if (!cliente?.token) {
+      console.error("[arquivamento] Clique bloqueado: cliente sem token", {
+        clienteId: cliente?.id,
+        cliente: cliente
+          ? { id: cliente.id, email: cliente.email, role: cliente.role }
+          : null,
+      });
+      toast.error(
+        "Sua sessão não possui um token válido. Saia e entre novamente.",
+      );
+      return;
+    }
+    if (descricao.trim().length < 5) {
+      toast.error("Descreva o motivo com pelo menos 5 caracteres");
+      return;
+    }
+
+    try {
+      setEnviandoSolicitacao(true);
+      const endpoint = `${import.meta.env.VITE_API_URL}/arquivamento/animais/${data.id}`;
+      console.info("[arquivamento] Usuário enviando solicitação", {
+        endpoint,
+        animalId: data.id,
+        usuarioId: cliente.id,
+        descricaoCaracteres: descricao.trim().length,
+      });
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${cliente.token}`,
+        },
+        body: JSON.stringify({ descricao: descricao.trim() }),
+      });
+      const corpo = await res.text();
+      let resposta: { erro?: string } = {};
+      try {
+        resposta = corpo ? JSON.parse(corpo) : {};
+      } catch {
+        console.error("[arquivamento] API retornou corpo não JSON", { corpo });
+      }
+      console.info("[arquivamento] Resposta da solicitação", {
+        status: res.status,
+        ok: res.ok,
+        corpo: resposta,
+      });
+      if (!res.ok) throw new Error(resposta.erro || `Falha HTTP ${res.status}`);
+
+      toast.success("Solicitação enviada para análise do administrador");
+      setDescricao("");
+      setAbrirSolicitacao(false);
+    } catch (error) {
+      console.error("[arquivamento] Falha no envio da solicitação", error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao enviar solicitação",
+      );
+    } finally {
+      setEnviandoSolicitacao(false);
+    }
+  };
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-12px_rgba(30,64,175,0.35)] ring-1 ring-slate-200/70 transition duration-300 hover:-translate-y-2 hover:shadow-[0_24px_45px_-15px_rgba(30,64,175,0.45)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
@@ -94,11 +229,15 @@ export function CardAnimal({
           className={`mt-3 flex items-center gap-1.5 text-xs ${
             temChip ? "font-semibold text-blue-900" : "text-slate-400"
           }`}
-          title={temChip ? "Código do microchip" : "Animal sem microchip informado"}
+          title={
+            temChip ? "Código do microchip" : "Animal sem microchip informado"
+          }
         >
           <IconeChip />
           <span className="font-normal text-slate-500">Chip:</span>
-          <span className={`truncate ${temChip ? "font-mono tracking-wide" : ""}`}>
+          <span
+            className={`truncate ${temChip ? "font-mono tracking-wide" : ""}`}
+          >
             {chip}
           </span>
         </p>
@@ -121,8 +260,79 @@ export function CardAnimal({
               Excluir
             </button>
           )}
+
+          {podeSolicitarArquivamento && (
+            <button
+              type="button"
+              onClick={() => setAbrirSolicitacao(true)}
+              className="w-full cursor-pointer rounded-xl border border-emerald-200 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-600 hover:text-white"
+            >
+              {isAdmin ? "Arquivar animal" : "Solicitar arquivamento"}
+            </button>
+          )}
         </div>
       </div>
+
+      {abrirSolicitacao && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4"
+          onClick={() => !enviandoSolicitacao && setAbrirSolicitacao(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Solicitar arquivamento"
+            className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="text-xl font-bold text-slate-900">
+              Solicitar arquivamento
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {isAdmin
+                ? "O animal será retirado do sistema imediatamente."
+                : "O administrador vai analisar o pedido antes de retirar este animal do sistema."}
+            </p>
+            <label className="mt-5 block text-sm font-semibold text-slate-700">
+              {isAdmin ? "Observação do arquivamento" : "Motivo da solicitação"}
+              <textarea
+                value={descricao}
+                onChange={(event) => setDescricao(event.target.value)}
+                rows={4}
+                maxLength={500}
+                placeholder={
+                  isAdmin
+                    ? "Opcional"
+                    : "Ex.: o animal foi encontrado pelo responsável..."
+                }
+                className="mt-2 w-full resize-none rounded-2xl border border-slate-300 p-3 font-normal outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+              />
+            </label>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setAbrirSolicitacao(false)}
+                disabled={enviandoSolicitacao}
+                className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={solicitarArquivamento}
+                disabled={enviandoSolicitacao}
+                className="rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {enviandoSolicitacao
+                  ? "Processando..."
+                  : isAdmin
+                    ? "Confirmar arquivamento"
+                    : "Confirmar solicitação"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

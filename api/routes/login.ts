@@ -34,7 +34,7 @@ router.post("/", async (req, res) => {
           clienteLogadoNome: cliente.nome,
           clienteLogadoRole: cliente.role, // user ou admin
         },
-        process.env.JWT_KEY as string,
+        process.env.JWT_SECRET || process.env.JWT_KEY || "segredo",
         { expiresIn: "1h" }
       )
 

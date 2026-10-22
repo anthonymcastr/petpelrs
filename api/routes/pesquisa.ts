@@ -22,6 +22,7 @@ router.get("/", async (req, res) => {
   try {
     // 1️⃣ Busca tudo (ou apenas campos necessários)
     const animais = await prisma.animal.findMany({
+      where: { arquivado: false },
       select: {
         id: true,
         nome: true,

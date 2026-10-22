@@ -43,6 +43,20 @@ export default function Login() {
       }
 
       const dados = await response.json();
+      console.info("[auth] Resposta do login", {
+        id: dados.id,
+        role: dados.role,
+        temToken: Boolean(dados.token),
+        campos: Object.keys(dados),
+      });
+
+      if (!dados.token) {
+        toast.error(
+          "A API autenticou sem retornar um token. Verifique o backend.",
+        );
+        return;
+      }
+
       logaCliente(dados);
 
       const tempoDecorrido = Date.now() - inicio;

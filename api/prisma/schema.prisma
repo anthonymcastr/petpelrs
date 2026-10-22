@@ -17,18 +17,21 @@ model Animal {
   cidade    tipoCidade
 
   // Código do microchip (letras e números). "Não contém" = sem chip
-  chip      String     @default("Não contém")
+  chip String @default("Não contém")
 
   // Localização aproximada do animal
   endereco  String?
   latitude  Float?
   longitude Float?
 
-  usuarioId Int
-  usuario   Cliente    @relation(fields: [usuarioId], references: [id]) // RELAÇÃO PADRÃO
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  contatos  Contato[]
+  arquivado Boolean @default(false)
+
+  usuarioId                Int
+  usuario                  Cliente                   @relation(fields: [usuarioId], references: [id]) // RELAÇÃO PADRÃO
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  contatos                 Contato[]
+  solicitacoesArquivamento SolicitacaoArquivamento[]
 }
 
 model Cliente {
@@ -42,9 +45,10 @@ model Cliente {
   updatedAt DateTime @updatedAt
   role      String   @default("user")
 
-  animais           Animal[]
-  contatosEnviados  Contato[] @relation("ContatoRemetente")
-  contatosRecebidos Contato[] @relation("ContatoDestinatario")
+  animais                  Animal[]
+  contatosEnviados         Contato[]                 @relation("ContatoRemetente")
+  contatosRecebidos        Contato[]                 @relation("ContatoDestinatario")
+  solicitacoesArquivamento SolicitacaoArquivamento[]
 }
 
 model Contato {
@@ -67,13 +71,34 @@ model Contato {
 }
 
 model Admin {
-  id        Int      @id @default(autoincrement())
-  nome      String
-  email     String   @unique
-  senha     String
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       Int                       @id @default(autoincrement())
+  nome                     String
+  email                    String                    @unique
+  senha                    String
+  role                     String                    @default("admin")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  solicitacoesArquivamento SolicitacaoArquivamento[]
+}
+
+model SolicitacaoArquivamento {
+  id            Int                           @id @default(autoincrement())
+  descricao     String
+  resposta      String?
+  status        StatusSolicitacaoArquivamento @default(PENDENTE)
+  criadoEm      DateTime                      @default(now())
+  atualizadoEm  DateTime                      @updatedAt
+  animalId      Int
+  solicitanteId Int
+  adminId       Int?
+
+  animal      Animal  @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  solicitante Cliente @relation(fields: [solicitanteId], references: [id])
+  admin       Admin?  @relation(fields: [adminId], references: [id])
+
+  @@index([animalId])
+  @@index([solicitanteId])
+  @@index([status])
 }
 
 // Lojas parceiras
@@ -81,10 +106,10 @@ model Petshop {
   id        Int       @id @default(autoincrement())
   nome      String
   descricao String?
-  logoUrl   String?   // imagem do card (logo ou foto da fachada)
-  endereco  String?   // ex: Rua Gonçalves Chaves, 100 - Centro
-  horario   String?   // ex: Seg a Sex, 9h às 18h
-  whatsapp  String    // só números, com DDI e DDD: 5553999999999
+  logoUrl   String? // imagem do card (logo ou foto da fachada)
+  endereco  String? // ex: Rua Gonçalves Chaves, 100 - Centro
+  horario   String? // ex: Seg a Sex, 9h às 18h
+  whatsapp  String // só números, com DDI e DDD: 5553999999999
   ativo     Boolean   @default(true)
   servicos  Servico[]
   createdAt DateTime  @default(now())
@@ -92,13 +117,13 @@ model Petshop {
 }
 
 model Servico {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   nome      String
   descricao String?
-  preco     Float?   // vazio = "sob consulta"
-  ativo     Boolean  @default(true)
+  preco     Float? // vazio = "sob consulta"
+  ativo     Boolean @default(true)
   petshopId Int
-  petshop   Petshop  @relation(fields: [petshopId], references: [id], onDelete: Cascade)
+  petshop   Petshop @relation(fields: [petshopId], references: [id], onDelete: Cascade)
 
   @@index([petshopId])
 }
@@ -111,4 +136,10 @@ enum TipoAnimal {
 
 enum tipoCidade {
   PELOTAS
+}
+
+enum StatusSolicitacaoArquivamento {
+  PENDENTE
+  APROVADA
+  RECUSADA
 }

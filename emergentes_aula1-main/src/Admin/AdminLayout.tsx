@@ -92,6 +92,23 @@ export default function AdminLayout() {
                 inbox
               </span>
             </NavLink>
+
+            <NavLink
+              to="/admin/arquivamentos"
+              className={({ isActive }) =>
+                [
+                  "flex items-center justify-between rounded-2xl px-4 py-3 text-sm font-semibold transition",
+                  isActive
+                    ? "bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-500/20"
+                    : "text-slate-200 hover:bg-white/8 hover:text-white",
+                ].join(" ")
+              }
+            >
+              <span>Arquivamentos</span>
+              <span className="text-xs uppercase tracking-[0.25em] opacity-70">
+                pedidos
+              </span>
+            </NavLink>
           </nav>
 
           <div className="mt-auto rounded-3xl border border-white/10 bg-white/5 p-4">
