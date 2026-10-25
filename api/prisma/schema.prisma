@@ -145,6 +145,8 @@ model Orcamento {
   servicosJson        String
   totalEstimado       Float?
   resposta            String?
+  dataAgendamento     String?
+  horarioAgendamento  String?
   status              StatusOrcamento @default(SOLICITACAO_ABERTA)
   avaliacaoNota       Int?
   avaliacaoComentario String?
@@ -160,6 +162,7 @@ model Orcamento {
   @@index([petshopId])
   @@index([clienteId])
   @@index([status])
+  @@unique([petshopId, dataAgendamento, horarioAgendamento], name: "orcamento_petshop_slot")
 }
 
 enum TipoAnimal {

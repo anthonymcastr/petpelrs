@@ -3,6 +3,8 @@ import { Router } from "express"
 import { z } from "zod"
 import bcrypt from "bcrypt"
 import { autentica, AuthRequest } from "../middleware/autentica"
+import { enviarImagem } from "../utils/armazenamento"
+import { logoRecebida, receberLogo, tipoDaImagem } from "../utils/uploadFoto"
 
 const prisma = new PrismaClient()
 const router = Router()
@@ -80,15 +82,23 @@ function semSenha<T extends { senha?: string | null }>(petshop: T) {
 // ========================
 // ADMIN - PETSHOPS E SERVIÇOS
 // ========================
-router.post("/cadastro", async (req, res) => {
+router.post("/cadastro", receberLogo, async (req, res) => {
   const valida = cadastroSchema.safeParse(req.body)
   if (!valida.success) return res.status(400).json({ erro: valida.error.errors[0].message })
 
   try {
     const { senha, confirmarSenha: _confirmarSenha, ...dados } = valida.data
+    const logo = logoRecebida(req)
+    let logoUrl = dados.logoUrl
+    if (logo) {
+      const tipoImagem = tipoDaImagem(logo.buffer)
+      if (!tipoImagem) return res.status(400).json({ erro: "Formato de imagem não suportado. Use JPG, PNG ou WebP." })
+      const imagem = await enviarImagem(logo.buffer, tipoImagem, "petpel/petshops")
+      logoUrl = imagem.url
+    }
     const localizacao = await geocodificar(dados.endereco)
     const petshop = await prisma.petshop.create({
-      data: { ...dados, ...localizacao, senha: await bcrypt.hash(senha, 10) },
+      data: { ...dados, logoUrl, ...localizacao, senha: await bcrypt.hash(senha, 10) },
     })
     res.status(201).json({ id: petshop.id, nome: petshop.nome, email: petshop.email })
   } catch (error: any) {

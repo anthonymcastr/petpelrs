@@ -40,6 +40,12 @@ export default function PetshopDetalhe() {
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [observacao, setObservacao] = useState("");
   const [enviandoOrcamento, setEnviandoOrcamento] = useState(false);
+  const [disponibilidade, setDisponibilidade] = useState<
+    Array<{ data: string; horarios: string[] }>
+  >([]);
+  const [erroDisponibilidade, setErroDisponibilidade] = useState(false);
+  const [dataAgendamento, setDataAgendamento] = useState("");
+  const [horarioAgendamento, setHorarioAgendamento] = useState("");
   const [mostrarConfirmacao, setMostrarConfirmacao] = useState(false);
   const [enviarPorWhatsapp, setEnviarPorWhatsapp] = useState(true);
   const { cliente } = useClienteStore();
@@ -66,6 +72,20 @@ export default function PetshopDetalhe() {
     buscar();
   }, [apiUrl, id]);
 
+  useEffect(() => {
+    if (!id) return;
+    fetch(`${apiUrl}/orcamentos/disponibilidade/${id}`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Não foi possível carregar os horários");
+        const dados = await res.json();
+        setDisponibilidade(dados.dias || []);
+      })
+      .catch(() => {
+        setErroDisponibilidade(true);
+        toast.error("Não foi possível carregar os horários disponíveis");
+      });
+  }, [apiUrl, id]);
+
   const escolhidos = useMemo(
     () => petshop?.servicos.filter((s) => selecionados.includes(s.id)) ?? [],
     [petshop, selecionados],
@@ -87,6 +107,10 @@ export default function PetshopDetalhe() {
 
   function abrirConfirmacao() {
     if (!petshop || escolhidos.length === 0) return;
+    if (!dataAgendamento || !horarioAgendamento) {
+      toast.error("Escolha uma data e um horário para continuar");
+      return;
+    }
     if (!cliente?.token) {
       toast.error("Você precisa fazer login para solicitar um orçamento");
       return;
@@ -146,6 +170,8 @@ export default function PetshopDetalhe() {
           petshopId: petshop.id,
           servicoIds: escolhidos.map((servico) => servico.id),
           observacao: observacao.trim() || undefined,
+          dataAgendamento,
+          horarioAgendamento,
         }),
       });
       const dados = await resposta.json();
@@ -266,6 +292,15 @@ export default function PetshopDetalhe() {
                   {petshop.horario}
                 </p>
               )}
+              {petshop.diasFuncionamento && (
+                <p className="flex items-start gap-2">
+                  <IconeLinha>
+                    <rect x="3" y="4" width="18" height="17" rx="2" />
+                    <path d="M8 2v4M16 2v4M3 10h18" />
+                  </IconeLinha>
+                  {petshop.diasFuncionamento}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -325,6 +360,7 @@ export default function PetshopDetalhe() {
                             {s.descricao}
                           </span>
                         )}
+
                       </span>
 
                       <span
@@ -339,6 +375,95 @@ export default function PetshopDetalhe() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {petshop.servicos.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="font-bold text-slate-900">Escolha o horário do atendimento</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Os horários já reservados não aparecem na lista.
+              </p>
+                {erroDisponibilidade ? (
+                  <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+                    Os horários estão temporariamente indisponíveis. A loja precisa concluir a atualização do sistema para liberar os agendamentos.
+                  </p>
+                ) : disponibilidade.length === 0 ? (
+                  <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
+                    Não há horários disponíveis nos próximos dias.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">
+                        Dia do atendimento
+                      </p>
+                      <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
+                        {disponibilidade.map((dia) => {
+                          const data = new Date(`${dia.data}T12:00:00`);
+                          const selecionada = dia.data === dataAgendamento;
+                          return (
+                            <button
+                              key={dia.data}
+                              type="button"
+                              onClick={() => {
+                                setDataAgendamento(dia.data);
+                                setHorarioAgendamento("");
+                              }}
+                              aria-pressed={selecionada}
+                              className={`min-w-[72px] rounded-xl border px-2 py-2.5 text-center transition ${
+                                selecionada
+                                  ? "border-blue-700 bg-blue-700 text-white shadow-sm"
+                                  : "border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              <span className={`block text-[11px] font-semibold uppercase ${
+                                selecionada ? "text-blue-100" : "text-slate-400"
+                              }`}>
+                                {data.toLocaleDateString("pt-BR", {
+                                  weekday: "short",
+                                }).replace(".", "")}
+                              </span>
+                              <span className="mt-1 block text-2xl font-black leading-none">
+                                {data.getDate()}
+                              </span>
+                              <span className={`mt-1 block text-xs ${
+                                selecionada ? "text-blue-100" : "text-slate-500"
+                              }`}>
+                                {data.toLocaleDateString("pt-BR", {
+                                  month: "short",
+                                }).replace(".", "")}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">Horários disponíveis</p>
+                      {!dataAgendamento ? (
+                        <p className="mt-2 text-sm text-slate-400">Selecione o dia para ver os horários.</p>
+                      ) : (
+                        <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
+                          {disponibilidade.find((dia) => dia.data === dataAgendamento)?.horarios.map((horario) => (
+                            <button
+                              key={horario}
+                              type="button"
+                              onClick={() => setHorarioAgendamento(horario)}
+                              className={`rounded-xl border px-3 py-2.5 text-sm font-semibold transition ${
+                                horarioAgendamento === horario
+                                  ? "border-blue-700 bg-blue-700 text-white shadow-sm"
+                                  : "border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              {horario}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+            </div>
           )}
 
           {petshop.servicos.length > 0 && (

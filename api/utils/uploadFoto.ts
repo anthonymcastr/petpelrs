@@ -9,6 +9,11 @@ const upload = multer({
   limits: { fileSize: LIMITE_FOTO_BYTES, files: MAX_FOTOS },
 })
 
+const uploadLogo = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: LIMITE_FOTO_BYTES, files: 1 },
+})
+
 export function receberFotos(req: Request, res: Response, next: NextFunction) {
   upload.array("fotos", MAX_FOTOS)(req, res, (erro: unknown) => {
     if (!erro) return next()
@@ -27,8 +32,25 @@ export function receberFotos(req: Request, res: Response, next: NextFunction) {
   })
 }
 
+export function receberLogo(req: Request, res: Response, next: NextFunction) {
+  uploadLogo.single("logo")(req, res, (erro: unknown) => {
+    if (!erro) return next()
+
+    if (erro instanceof multer.MulterError && erro.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ erro: "A imagem é grande demais. Use uma imagem de até 4 MB." })
+    }
+
+    console.error("Erro ao receber logo:", erro)
+    return res.status(400).json({ erro: "Não foi possível ler a imagem enviada." })
+  })
+}
+
 export function fotosRecebidas(req: Request): Express.Multer.File[] {
   return Array.isArray(req.files) ? req.files : []
+}
+
+export function logoRecebida(req: Request): Express.Multer.File | undefined {
+  return req.file
 }
 
 export type TipoImagem = "image/jpeg" | "image/png" | "image/webp"

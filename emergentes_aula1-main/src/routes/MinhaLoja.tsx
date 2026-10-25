@@ -5,7 +5,7 @@ import { OrcamentoStatus, ServicosOrcamento } from "../components/OrcamentoStatu
 import { OrcamentoDetalhes } from "../components/OrcamentoDetalhes";
 import { filtrarPedidos, OrcamentoFiltros, type FiltrosOrcamento } from "../components/OrcamentoFiltros";
 
-type Pedido = { id: number; status: string; criadoEm: string; cliente: { nome: string; email: string; telefone?: string }; petshop?: { nome: string }; servicosJson: string; observacao?: string | null; resposta?: string | null };
+type Pedido = { id: number; status: string; criadoEm: string; cliente: { nome: string; email: string; telefone?: string }; petshop?: { nome: string }; servicosJson: string; observacao?: string | null; resposta?: string | null; dataAgendamento?: string | null; horarioAgendamento?: string | null };
 const status = [{ valor: "SOLICITACAO_ABERTA", label: "Solicitação em aberto" }, { valor: "SERVICO_AGENDADO", label: "Serviço agendado" }, { valor: "FINALIZADO", label: "Finalizado" }, { valor: "CANCELADO", label: "Cancelado" }];
 
 export default function MinhaLoja() {

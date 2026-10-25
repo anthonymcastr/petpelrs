@@ -14,12 +14,12 @@ if (cloudinaryConfigurado) {
         api_secret: process.env.CLOUDINARY_API_SECRET,
     });
 }
-async function enviarImagem(buffer, tipo) {
+async function enviarImagem(buffer, tipo, pasta = "petpel/animais") {
     if (!cloudinaryConfigurado) {
         throw new Error("Cloudinary não configurado. Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET.");
     }
     return new Promise((resolve, reject) => {
-        const stream = cloudinary_1.v2.uploader.upload_stream({ folder: "petpel/animais", resource_type: "image", format: tipo.split("/")[1] }, (erro, resultado) => {
+        const stream = cloudinary_1.v2.uploader.upload_stream({ folder: pasta, resource_type: "image", format: tipo.split("/")[1] }, (erro, resultado) => {
             if (erro || !resultado)
                 return reject(erro || new Error("Cloudinary não retornou a imagem"));
             resolve({ url: resultado.secure_url, publicId: resultado.public_id });

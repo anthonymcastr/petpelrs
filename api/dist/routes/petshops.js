@@ -8,6 +8,8 @@ const express_1 = require("express");
 const zod_1 = require("zod");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const autentica_1 = require("../middleware/autentica");
+const armazenamento_1 = require("../utils/armazenamento");
+const uploadFoto_1 = require("../utils/uploadFoto");
 const prisma = new client_1.PrismaClient();
 const router = (0, express_1.Router)();
 function somenteAdmin(req, res, next) {
@@ -77,15 +79,24 @@ function semSenha(petshop) {
 // ========================
 // ADMIN - PETSHOPS E SERVIÇOS
 // ========================
-router.post("/cadastro", async (req, res) => {
+router.post("/cadastro", uploadFoto_1.receberLogo, async (req, res) => {
     const valida = cadastroSchema.safeParse(req.body);
     if (!valida.success)
         return res.status(400).json({ erro: valida.error.errors[0].message });
     try {
         const { senha, confirmarSenha: _confirmarSenha, ...dados } = valida.data;
+        const logo = (0, uploadFoto_1.logoRecebida)(req);
+        let logoUrl = dados.logoUrl;
+        if (logo) {
+            const tipoImagem = (0, uploadFoto_1.tipoDaImagem)(logo.buffer);
+            if (!tipoImagem)
+                return res.status(400).json({ erro: "Formato de imagem não suportado. Use JPG, PNG ou WebP." });
+            const imagem = await (0, armazenamento_1.enviarImagem)(logo.buffer, tipoImagem, "petpel/petshops");
+            logoUrl = imagem.url;
+        }
         const localizacao = await geocodificar(dados.endereco);
         const petshop = await prisma.petshop.create({
-            data: { ...dados, ...localizacao, senha: await bcrypt_1.default.hash(senha, 10) },
+            data: { ...dados, logoUrl, ...localizacao, senha: await bcrypt_1.default.hash(senha, 10) },
         });
         res.status(201).json({ id: petshop.id, nome: petshop.nome, email: petshop.email });
     }

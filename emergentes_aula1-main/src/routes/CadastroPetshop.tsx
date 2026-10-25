@@ -41,7 +41,6 @@ export default function CadastroPetshop() {
     nome: "",
     email: "",
     whatsapp: "",
-    logoUrl: "",
     endereco: "",
     descricao: "",
     abertura: "08:00",
@@ -49,6 +48,7 @@ export default function CadastroPetshop() {
     senha: "",
     confirmarSenha: "",
   });
+  const [logo, setLogo] = useState<File | null>(null);
   const [diasSelecionados, setDiasSelecionados] = useState<string[]>([
     "segunda",
     "terca",
@@ -91,19 +91,20 @@ export default function CadastroPetshop() {
         `${import.meta.env.VITE_API_URL}/petshops/cadastro`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nome: form.nome,
-            email: form.email,
-            whatsapp: form.whatsapp,
-            logoUrl: form.logoUrl || null,
-            endereco: form.endereco || null,
-            descricao: form.descricao || null,
-            diasFuncionamento: nomesDias.join(", "),
-            horario: `${form.abertura} às ${form.fechamento}`,
-            senha: form.senha,
-            confirmarSenha: form.confirmarSenha,
-          }),
+          body: (() => {
+            const dados = new FormData();
+            dados.append("nome", form.nome);
+            dados.append("email", form.email);
+            dados.append("whatsapp", form.whatsapp);
+            dados.append("endereco", form.endereco);
+            dados.append("descricao", form.descricao);
+            dados.append("diasFuncionamento", nomesDias.join(", "));
+            dados.append("horario", `${form.abertura} às ${form.fechamento}`);
+            dados.append("senha", form.senha);
+            dados.append("confirmarSenha", form.confirmarSenha);
+            if (logo) dados.append("logo", logo);
+            return dados;
+          })(),
         },
       );
       const dados = await res.json();
@@ -207,16 +208,18 @@ export default function CadastroPetshop() {
               />
             </label>
             <label className="sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-semibold text-slate-700">
-                Foto ou logo da loja
-              </span>
               <input
-                className={campo}
-                type="url"
-                placeholder="https://exemplo.com/logo.jpg"
-                value={form.logoUrl}
-                onChange={(e) => alterar("logoUrl", e.target.value)}
+                id="logo"
+                className="sr-only"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={(e) => setLogo(e.target.files?.[0] || null)}
               />
+              <span
+                className={`${campo} block cursor-pointer text-center font-semibold text-blue-900 hover:border-blue-700 hover:bg-blue-50`}
+              >
+                <span>Escolher Foto ou Logo</span>
+              </span>
             </label>
             <label className="sm:col-span-2">
               <span className="mb-1.5 block text-sm font-semibold text-slate-700">

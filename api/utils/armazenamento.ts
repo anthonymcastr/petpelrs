@@ -18,14 +18,14 @@ if (cloudinaryConfigurado) {
 
 export type ImagemArmazenada = { url: string; publicId: string }
 
-export async function enviarImagem(buffer: Buffer, tipo: TipoImagem): Promise<ImagemArmazenada> {
+export async function enviarImagem(buffer: Buffer, tipo: TipoImagem, pasta = "petpel/animais"): Promise<ImagemArmazenada> {
   if (!cloudinaryConfigurado) {
     throw new Error("Cloudinary não configurado. Defina CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET.")
   }
 
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder: "petpel/animais", resource_type: "image", format: tipo.split("/")[1] },
+      { folder: pasta, resource_type: "image", format: tipo.split("/")[1] },
       (erro, resultado) => {
         if (erro || !resultado) return reject(erro || new Error("Cloudinary não retornou a imagem"))
         resolve({ url: resultado.secure_url, publicId: resultado.public_id })
