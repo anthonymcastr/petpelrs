@@ -13,6 +13,7 @@ model Animal {
   idade     Int
   raca      String
   urlImagem String
+  fotos     String[]   @default([])
   tipo      TipoAnimal
   cidade    tipoCidade
 

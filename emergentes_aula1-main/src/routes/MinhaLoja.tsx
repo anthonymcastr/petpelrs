@@ -1,131 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { usePetshopStore } from "../context/PetshopContext";
+import { OrcamentoStatus, ServicosOrcamento } from "../components/OrcamentoStatus";
+import { OrcamentoDetalhes } from "../components/OrcamentoDetalhes";
+import { filtrarPedidos, OrcamentoFiltros, type FiltrosOrcamento } from "../components/OrcamentoFiltros";
 
-type Pedido = {
-  id: number;
-  status: string;
-  criadoEm: string;
-  cliente: { nome: string; email: string; telefone?: string };
-  servicosJson: string;
-  observacao?: string | null;
-};
-const status = [
-  { valor: "SOLICITACAO_ABERTA", label: "Solicitação em aberto" },
-  { valor: "SERVICO_AGENDADO", label: "Serviço agendado" },
-  { valor: "FINALIZADO", label: "Finalizado" },
-  { valor: "CANCELADO", label: "Cancelado" },
-];
-const cores: Record<string, string> = {
-  SOLICITACAO_ABERTA: "border-sky-300 bg-sky-50 text-sky-900",
-  SERVICO_AGENDADO: "border-amber-300 bg-amber-50 text-amber-900",
-  FINALIZADO: "border-emerald-300 bg-emerald-50 text-emerald-900",
-  CANCELADO: "border-red-300 bg-red-50 text-red-900",
-};
+type Pedido = { id: number; status: string; criadoEm: string; cliente: { nome: string; email: string; telefone?: string }; petshop?: { nome: string }; servicosJson: string; observacao?: string | null; resposta?: string | null };
+const status = [{ valor: "SOLICITACAO_ABERTA", label: "Solicitação em aberto" }, { valor: "SERVICO_AGENDADO", label: "Serviço agendado" }, { valor: "FINALIZADO", label: "Finalizado" }, { valor: "CANCELADO", label: "Cancelado" }];
 
 export default function MinhaLoja() {
   const { petshop } = usePetshopStore();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [detalhe, setDetalhe] = useState<Pedido | null>(null);
+  const [filtros, setFiltros] = useState<FiltrosOrcamento>({ status: "", inicio: "", fim: "" });
   const apiUrl = import.meta.env.VITE_API_URL;
+  async function carregar() { if (!petshop?.token) return; const res = await fetch(`${apiUrl}/orcamentos/petshop`, { headers: { Authorization: `Bearer ${petshop.token}` } }); if (res.ok) setPedidos(await res.json()); else toast.error("Erro ao carregar pedidos"); }
+  useEffect(() => { carregar(); }, [petshop?.token]);
+  async function mudarStatus(id: number, novoStatus: string) { const res = await fetch(`${apiUrl}/orcamentos/${id}/status`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${petshop?.token}` }, body: JSON.stringify({ status: novoStatus }) }); const dados = await res.json(); if (!res.ok) return toast.error(dados.erro || "Erro ao alterar status"); toast.success("Status atualizado e cliente notificado"); setPedidos((atual) => atual.map((pedido) => pedido.id === id ? { ...pedido, status: novoStatus } : pedido)); }
+  const filtrados = useMemo(() => filtrarPedidos(pedidos, filtros), [pedidos, filtros]);
+  const contadores = useMemo(() => ({ total: pedidos.length, abertos: pedidos.filter((p) => p.status === "SOLICITACAO_ABERTA").length, agendados: pedidos.filter((p) => p.status === "SERVICO_AGENDADO").length, finalizados: pedidos.filter((p) => p.status === "FINALIZADO").length }), [pedidos]);
 
-  async function carregar() {
-    if (!petshop?.token) return;
-    const res = await fetch(`${apiUrl}/orcamentos/petshop`, {
-      headers: { Authorization: `Bearer ${petshop.token}` },
-    });
-    if (res.ok) setPedidos(await res.json());
-    else toast.error("Erro ao carregar pedidos");
-  }
-  useEffect(() => {
-    carregar();
-  }, [petshop?.token]);
-
-  async function mudarStatus(id: number, novoStatus: string) {
-    const res = await fetch(`${apiUrl}/orcamentos/${id}/status`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${petshop?.token}`,
-      },
-      body: JSON.stringify({ status: novoStatus }),
-    });
-    const dados = await res.json();
-    if (!res.ok) return toast.error(dados.erro || "Erro ao alterar status");
-    toast.success("Status atualizado e cliente notificado");
-    setPedidos((atual) =>
-      atual.map((pedido) =>
-        pedido.id === id ? { ...pedido, status: novoStatus } : pedido,
-      ),
-    );
-  }
-
-  return (
-    <main className="mx-auto min-h-[70vh] max-w-6xl bg-slate-50 px-4 py-8">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-blue-700">
-          Minha loja
-        </p>
-        <h1 className="mt-2 text-3xl font-black text-slate-900">
-          Pedidos recebidos
-        </h1>
-        <p className="mt-2 text-slate-600">
-          Atualize o andamento e o cliente receberá um e-mail.
-        </p>
-      </header>
-      <div className="mt-6 overflow-x-auto rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="p-4">Cliente</th>
-              <th className="p-4">Serviços</th>
-              <th className="p-4">Data</th>
-              <th className="p-4">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pedidos.map((pedido) => (
-              <tr key={pedido.id} className="border-b last:border-0">
-                <td className="p-4">
-                  <strong>{pedido.cliente.nome}</strong>
-                  <br />
-                  <span className="text-slate-500">{pedido.cliente.email}</span>
-                </td>
-                <td className="p-4">
-                  {(JSON.parse(pedido.servicosJson) as { nome: string }[])
-                    .map((item) => item.nome)
-                    .join(", ")}
-                  {pedido.observacao && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      {pedido.observacao}
-                    </p>
-                  )}
-                </td>
-                <td className="p-4 text-slate-500">
-                  {new Date(pedido.criadoEm).toLocaleString()}
-                </td>
-                <td className="p-4">
-                  <select
-                    value={pedido.status}
-                    onChange={(e) => mudarStatus(pedido.id, e.target.value)}
-                    className={`rounded-xl border p-2 font-semibold ${cores[pedido.status] || "border-slate-300"}`}
-                  >
-                    {status.map((item) => (
-                      <option key={item.valor} value={item.valor}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {pedidos.length === 0 && (
-          <p className="p-8 text-center text-slate-500">
-            Nenhum pedido recebido.
-          </p>
-        )}
-      </div>
-    </main>
-  );
+  return <main className="min-h-[75vh] bg-slate-50 px-4 py-6 sm:px-6 lg:px-10"><div className="mx-auto max-w-6xl"><header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-9"><p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-700">Central da loja</p><div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><h1 className="text-3xl font-black text-slate-900 sm:text-4xl">Pedidos recebidos</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Atualize os atendimentos e mantenha seus clientes informados.</p></div><div className="rounded-2xl bg-blue-50 px-5 py-3"><p className="text-xs font-bold uppercase tracking-wider text-blue-700">Total de pedidos</p><strong className="text-3xl font-black text-slate-900">{contadores.total}</strong></div></div></header><section className="mt-5 grid grid-cols-3 gap-3 sm:gap-4"><div className="rounded-2xl border border-sky-100 bg-white p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-sky-600">Abertos</p><strong className="mt-1 block text-2xl font-black">{contadores.abertos}</strong></div><div className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-amber-600">Agendados</p><strong className="mt-1 block text-2xl font-black">{contadores.agendados}</strong></div><div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm"><p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Finalizados</p><strong className="mt-1 block text-2xl font-black">{contadores.finalizados}</strong></div></section><div className="mt-6"><OrcamentoFiltros filtros={filtros} onChange={setFiltros} total={filtrados.length} /></div><div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">{filtrados.length === 0 ? <p className="p-12 text-center text-slate-500">Nenhum pedido encontrado.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-sm"><thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-4">Cliente</th><th className="p-4">Serviços</th><th className="p-4">Data</th><th className="p-4">Status</th><th className="p-4">Ação</th></tr></thead><tbody>{filtrados.map((pedido) => <tr key={pedido.id} className="border-b border-slate-100 last:border-0"><td className="p-4"><strong>{pedido.cliente.nome}</strong><br /><span className="text-slate-500">{pedido.cliente.email}</span></td><td className="p-4"><ServicosOrcamento servicosJson={pedido.servicosJson} /></td><td className="p-4 text-slate-500">{new Date(pedido.criadoEm).toLocaleString()}</td><td className="p-4"><select value={pedido.status} onChange={(e) => mudarStatus(pedido.id, e.target.value)} className="rounded-xl border border-slate-300 bg-white p-2 font-semibold text-slate-800 focus:border-blue-700">{status.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}</select><div className="mt-2"><OrcamentoStatus status={pedido.status} /></div></td><td className="p-4"><button type="button" onClick={() => setDetalhe(pedido)} className="rounded-xl border border-blue-200 px-3 py-2 text-sm font-bold text-blue-800 hover:bg-blue-50">Ver detalhes</button></td></tr>)}</tbody></table></div>}</div></div>{detalhe && <OrcamentoDetalhes pedido={detalhe} fechar={() => setDetalhe(null)} />}</main>;
 }

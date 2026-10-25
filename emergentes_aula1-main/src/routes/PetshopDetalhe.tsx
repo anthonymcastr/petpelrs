@@ -87,13 +87,17 @@ export default function PetshopDetalhe() {
 
   function abrirConfirmacao() {
     if (!petshop || escolhidos.length === 0) return;
+    if (!cliente?.token) {
+      toast.error("Você precisa fazer login para solicitar um orçamento");
+      return;
+    }
     setMostrarConfirmacao(true);
   }
 
   async function confirmarEnvio() {
     if (!petshop || escolhidos.length === 0) return;
     if (!cliente?.token) {
-      toast.error("Entre na sua conta para receber a confirmação por e-mail");
+      toast.error("Faça login para solicitar um orçamento");
       return;
     }
 

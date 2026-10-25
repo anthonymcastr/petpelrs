@@ -4,6 +4,8 @@ import { z, ZodError } from "zod"
 import { autentica, AuthRequest } from "../middleware/autentica"
 import { enviarEmail } from "../utils/email"
 import { verificaImagemSegura } from "../utils/safeSearch"
+import { enviarImagem, removerImagens } from "../utils/armazenamento"
+import { receberFotos, fotosRecebidas, tipoDaImagem, MAX_FOTOS, type TipoImagem } from "../utils/uploadFoto"
 
 const prisma = new PrismaClient()
 const router = Router()
@@ -13,12 +15,12 @@ const router = Router()
 // ========================
 const animalSchema = z.object({
   nome: z.string().min(2, { message: "Nome deve possuir, no mínimo, 2 caracteres" }),
-  idade: z.number().min(0, { message: "Idade deve ser um número positivo" }),
+  idade: z.coerce.number().min(0, { message: "Idade deve ser um número positivo" }),
   raca: z.string().min(2, { message: "Espécie deve possuir, no mínimo, 2 caracteres" }),
-  urlImagem: z.string().min(5, { message: "URL da imagem deve possuir, no mínimo, 5 caracteres" }),
+  urlImagem: z.string().min(5, { message: "URL da imagem deve possuir, no mínimo, 5 caracteres" }).optional(),
   tipo: z.enum(["ADOCAO", "PERDIDO", "ENCONTRADO"]),
   cidade: z.enum(["PELOTAS"]),
-  usuarioId: z.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
+  usuarioId: z.coerce.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
   chip: z.string().optional().nullable(),
   endereco: z.string().optional().nullable()
 })
@@ -209,7 +211,7 @@ router.get("/:id", async (req, res) => {
 // ========================
 // POST - CRIAR ANIMAL
 // ========================
-router.post("/", async (req, res) => {
+router.post("/", receberFotos, async (req, res) => {
   // LOG da URL recebida
   if (req.body && req.body.urlImagem) {
     console.log("URL da imagem recebida:", req.body.urlImagem)
@@ -221,6 +223,9 @@ router.post("/", async (req, res) => {
   if (!valida.success) return res.status(400).json({ erro: primeiroErro(valida.error) })
 
   const { nome, idade, raca, urlImagem, tipo, cidade, usuarioId, chip, endereco } = valida.data
+  const fotos = fotosRecebidas(req)
+  if (fotos.length > MAX_FOTOS) return res.status(400).json({ erro: `Envie no máximo ${MAX_FOTOS} fotos.` })
+  if (fotos.length === 0 && !urlImagem) return res.status(400).json({ erro: "Envie pelo menos uma foto do animal." })
 
   // Chip: padroniza e confere se já existe
   const chipPreparado = prepararChip(chip)
@@ -235,18 +240,32 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ erro: "Erro ao verificar o chip" })
   }
 
-  // Verificação automática de imagem imprópria
+  let urls = urlImagem ? [urlImagem] : []
+  const publicIds: string[] = []
+
   try {
-    const imagemSegura = await verificaImagemSegura(urlImagem)
-    if (!imagemSegura) {
-      console.log("Imagem bloqueada pelo safeSearch!")
-      return res.status(400).json({ erro: "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão." })
-    } else {
-      console.log("Imagem passou pelo safeSearch!")
+    if (fotos.length > 0) {
+      const tipos: TipoImagem[] = fotos.map((foto, indice) => {
+        const tipoImagem = tipoDaImagem(foto.buffer)
+        if (!tipoImagem) throw new Error(`Foto ${indice + 1}: formato não suportado. Use JPG, PNG ou WebP.`)
+        return tipoImagem
+      })
+      const imagens = await Promise.all(fotos.map((foto, indice) => enviarImagem(foto.buffer, tipos[indice])))
+      publicIds.push(...imagens.map((imagem) => imagem.publicId))
+      urls = imagens.map((imagem) => imagem.url)
+    }
+
+    for (const url of urls) {
+      const imagemSegura = await verificaImagemSegura(url)
+      if (!imagemSegura) {
+        await removerImagens(publicIds)
+        return res.status(400).json({ erro: "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão." })
+      }
     }
   } catch (err) {
-    console.error("Erro ao verificar imagem no Sightengine:", err)
-    return res.status(500).json({ erro: "Erro ao verificar imagem. Tente novamente mais tarde." })
+    await removerImagens(publicIds)
+    console.error("Erro ao processar fotos:", err)
+    return res.status(500).json({ erro: err instanceof Error ? err.message : "Erro ao processar as fotos. Tente novamente mais tarde." })
   }
 
   // Localização: endereço não encontrado => erro; serviço fora do ar => segue sem localização
@@ -266,7 +285,8 @@ router.post("/", async (req, res) => {
         nome,
         idade,
         raca,
-        urlImagem,
+        urlImagem: urls[0],
+        fotos: urls,
         tipo,
         cidade,
         usuarioId,

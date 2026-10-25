@@ -6,6 +6,8 @@ const zod_1 = require("zod");
 const autentica_1 = require("../middleware/autentica");
 const email_1 = require("../utils/email");
 const safeSearch_1 = require("../utils/safeSearch");
+const armazenamento_1 = require("../utils/armazenamento");
+const uploadFoto_1 = require("../utils/uploadFoto");
 const prisma = new client_1.PrismaClient();
 const router = (0, express_1.Router)();
 // ========================
@@ -13,12 +15,12 @@ const router = (0, express_1.Router)();
 // ========================
 const animalSchema = zod_1.z.object({
     nome: zod_1.z.string().min(2, { message: "Nome deve possuir, no mínimo, 2 caracteres" }),
-    idade: zod_1.z.number().min(0, { message: "Idade deve ser um número positivo" }),
+    idade: zod_1.z.coerce.number().min(0, { message: "Idade deve ser um número positivo" }),
     raca: zod_1.z.string().min(2, { message: "Espécie deve possuir, no mínimo, 2 caracteres" }),
-    urlImagem: zod_1.z.string().min(5, { message: "URL da imagem deve possuir, no mínimo, 5 caracteres" }),
+    urlImagem: zod_1.z.string().min(5, { message: "URL da imagem deve possuir, no mínimo, 5 caracteres" }).optional(),
     tipo: zod_1.z.enum(["ADOCAO", "PERDIDO", "ENCONTRADO"]),
     cidade: zod_1.z.enum(["PELOTAS"]),
-    usuarioId: zod_1.z.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
+    usuarioId: zod_1.z.coerce.number().min(1, { message: "ID do usuário deve ser um número positivo" }),
     chip: zod_1.z.string().optional().nullable(),
     endereco: zod_1.z.string().optional().nullable()
 });
@@ -175,7 +177,7 @@ router.get("/:id", async (req, res) => {
 // ========================
 // POST - CRIAR ANIMAL
 // ========================
-router.post("/", async (req, res) => {
+router.post("/", uploadFoto_1.receberFotos, async (req, res) => {
     // LOG da URL recebida
     if (req.body && req.body.urlImagem) {
         console.log("URL da imagem recebida:", req.body.urlImagem);
@@ -187,6 +189,11 @@ router.post("/", async (req, res) => {
     if (!valida.success)
         return res.status(400).json({ erro: primeiroErro(valida.error) });
     const { nome, idade, raca, urlImagem, tipo, cidade, usuarioId, chip, endereco } = valida.data;
+    const fotos = (0, uploadFoto_1.fotosRecebidas)(req);
+    if (fotos.length > uploadFoto_1.MAX_FOTOS)
+        return res.status(400).json({ erro: `Envie no máximo ${uploadFoto_1.MAX_FOTOS} fotos.` });
+    if (fotos.length === 0 && !urlImagem)
+        return res.status(400).json({ erro: "Envie pelo menos uma foto do animal." });
     // Chip: padroniza e confere se já existe
     const chipPreparado = prepararChip(chip);
     if (!chipPreparado.ok)
@@ -200,20 +207,32 @@ router.post("/", async (req, res) => {
         console.error(error);
         return res.status(500).json({ erro: "Erro ao verificar o chip" });
     }
-    // Verificação automática de imagem imprópria
+    let urls = urlImagem ? [urlImagem] : [];
+    const publicIds = [];
     try {
-        const imagemSegura = await (0, safeSearch_1.verificaImagemSegura)(urlImagem);
-        if (!imagemSegura) {
-            console.log("Imagem bloqueada pelo safeSearch!");
-            return res.status(400).json({ erro: "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão." });
+        if (fotos.length > 0) {
+            const tipos = fotos.map((foto, indice) => {
+                const tipoImagem = (0, uploadFoto_1.tipoDaImagem)(foto.buffer);
+                if (!tipoImagem)
+                    throw new Error(`Foto ${indice + 1}: formato não suportado. Use JPG, PNG ou WebP.`);
+                return tipoImagem;
+            });
+            const imagens = await Promise.all(fotos.map((foto, indice) => (0, armazenamento_1.enviarImagem)(foto.buffer, tipos[indice])));
+            publicIds.push(...imagens.map((imagem) => imagem.publicId));
+            urls = imagens.map((imagem) => imagem.url);
         }
-        else {
-            console.log("Imagem passou pelo safeSearch!");
+        for (const url of urls) {
+            const imagemSegura = await (0, safeSearch_1.verificaImagemSegura)(url);
+            if (!imagemSegura) {
+                await (0, armazenamento_1.removerImagens)(publicIds);
+                return res.status(400).json({ erro: "Falha ao cadastrar animal. São permitidas apenas fotos de animais no nosso sistema. Agradecemos a compreensão." });
+            }
         }
     }
     catch (err) {
-        console.error("Erro ao verificar imagem no Sightengine:", err);
-        return res.status(500).json({ erro: "Erro ao verificar imagem. Tente novamente mais tarde." });
+        await (0, armazenamento_1.removerImagens)(publicIds);
+        console.error("Erro ao processar fotos:", err);
+        return res.status(500).json({ erro: err instanceof Error ? err.message : "Erro ao processar as fotos. Tente novamente mais tarde." });
     }
     // Localização: endereço não encontrado => erro; serviço fora do ar => segue sem localização
     let localizacao = { endereco: null, latitude: null, longitude: null };
@@ -232,7 +251,8 @@ router.post("/", async (req, res) => {
                 nome,
                 idade,
                 raca,
-                urlImagem,
+                urlImagem: urls[0],
+                fotos: urls,
                 tipo,
                 cidade,
                 usuarioId,

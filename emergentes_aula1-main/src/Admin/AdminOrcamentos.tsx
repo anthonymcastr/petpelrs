@@ -1,88 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAdminStore } from "./context/AdminContext";
+import { OrcamentoStatus, ServicosOrcamento } from "../components/OrcamentoStatus";
+import { OrcamentoDetalhes } from "../components/OrcamentoDetalhes";
+import { filtrarPedidos, OrcamentoFiltros, type FiltrosOrcamento } from "../components/OrcamentoFiltros";
 
-type Pedido = {
-  id: number;
-  status: string;
-  criadoEm: string;
-  cliente: { nome: string; email: string };
-  petshop: { nome: string };
-  servicosJson: string;
-};
-const nomes: Record<string, string> = {
-  SOLICITACAO_ABERTA: "Solicitação em aberto",
-  SERVICO_AGENDADO: "Serviço agendado",
-  FINALIZADO: "Finalizado",
-  CANCELADO: "Cancelado",
-};
+type Pedido = { id: number; status: string; criadoEm: string; cliente: { nome: string; email: string }; petshop: { nome: string }; servicosJson: string; observacao?: string | null; resposta?: string | null };
 
 export default function AdminOrcamentos() {
   const { admin } = useAdminStore();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [detalhe, setDetalhe] = useState<Pedido | null>(null);
+  const [filtros, setFiltros] = useState<FiltrosOrcamento>({ status: "", inicio: "", fim: "" });
   const apiUrl = import.meta.env.VITE_API_URL;
-  useEffect(() => {
-    if (admin?.token)
-      fetch(`${apiUrl}/orcamentos/admin`, {
-        headers: { Authorization: `Bearer ${admin.token}` },
-      })
-        .then((res) => res.json())
-        .then(setPedidos)
-        .catch(() => toast.error("Erro ao carregar histórico"));
-  }, [admin?.token]);
-  return (
-    <main className="mx-auto max-w-6xl">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.25em] text-cyan-700">
-          Administração
-        </p>
-        <h1 className="mt-2 text-3xl font-black text-slate-900">
-          Histórico de orçamentos
-        </h1>
-      </header>
-      <div className="mt-6 overflow-x-auto rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-            <tr>
-              <th className="p-4">Usuário</th>
-              <th className="p-4">Petshop</th>
-              <th className="p-4">Serviços</th>
-              <th className="p-4">Data</th>
-              <th className="p-4">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pedidos.map((pedido) => (
-              <tr key={pedido.id} className="border-b last:border-0">
-                <td className="p-4">
-                  <strong>{pedido.cliente.nome}</strong>
-                  <br />
-                  {pedido.cliente.email}
-                </td>
-                <td className="p-4">{pedido.petshop.nome}</td>
-                <td className="p-4">
-                  {(JSON.parse(pedido.servicosJson) as { nome: string }[])
-                    .map((item) => item.nome)
-                    .join(", ")}
-                </td>
-                <td className="p-4 text-slate-500">
-                  {new Date(pedido.criadoEm).toLocaleString()}
-                </td>
-                <td className="p-4">
-                  <span className="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-900">
-                    {nomes[pedido.status] || pedido.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {pedidos.length === 0 && (
-          <p className="p-8 text-center text-slate-500">
-            Nenhum orçamento registrado.
-          </p>
-        )}
-      </div>
-    </main>
-  );
+  useEffect(() => { if (admin?.token) fetch(`${apiUrl}/orcamentos/admin`, { headers: { Authorization: `Bearer ${admin.token}` } }).then((res) => res.json()).then(setPedidos).catch(() => toast.error("Erro ao carregar histórico")); }, [admin?.token]);
+  const filtrados = useMemo(() => filtrarPedidos(pedidos, filtros), [pedidos, filtros]);
+  const resumo = useMemo(() => ({ total: pedidos.length, abertos: pedidos.filter((p) => p.status === "SOLICITACAO_ABERTA").length, agendados: pedidos.filter((p) => p.status === "SERVICO_AGENDADO").length, finalizados: pedidos.filter((p) => p.status === "FINALIZADO").length }), [pedidos]);
+  return <main className="min-h-[75vh] bg-slate-100/70 px-4 py-6 sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl"><header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-9"><p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-700">Visão geral</p><div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><h1 className="text-3xl font-black text-slate-900 sm:text-4xl">Histórico de orçamentos</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Acompanhe os pedidos da plataforma com filtros rápidos por período e status.</p></div><div className="rounded-2xl bg-blue-50 px-5 py-3"><p className="text-xs font-bold uppercase tracking-wider text-blue-700">Total registrado</p><strong className="text-3xl font-black text-slate-900">{resumo.total}</strong></div></div></header><section className="mt-5 grid grid-cols-3 gap-3 sm:gap-4"><div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-sky-100"><p className="text-xs font-bold uppercase tracking-wide text-sky-600">Em aberto</p><strong className="mt-1 block text-2xl font-black text-slate-900">{resumo.abertos}</strong></div><div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-amber-100"><p className="text-xs font-bold uppercase tracking-wide text-amber-600">Agendados</p><strong className="mt-1 block text-2xl font-black text-slate-900">{resumo.agendados}</strong></div><div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-emerald-100"><p className="text-xs font-bold uppercase tracking-wide text-emerald-600">Finalizados</p><strong className="mt-1 block text-2xl font-black text-slate-900">{resumo.finalizados}</strong></div></section><div className="mt-6"><OrcamentoFiltros filtros={filtros} onChange={setFiltros} total={filtrados.length} /></div><section className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">{filtrados.length === 0 ? <p className="p-12 text-center text-slate-500">Nenhum orçamento encontrado.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[980px] text-left text-sm"><thead className="border-b border-slate-100 bg-slate-50 text-xs uppercase tracking-wider text-slate-500"><tr><th className="p-4">Usuário</th><th className="p-4">Petshop</th><th className="p-4">Serviços</th><th className="p-4">Data</th><th className="p-4">Status</th><th className="p-4">Ação</th></tr></thead><tbody>{filtrados.map((pedido) => <tr key={pedido.id} className="border-b border-slate-100 last:border-0"><td className="p-4"><strong>{pedido.cliente.nome}</strong><br /><span className="text-slate-500">{pedido.cliente.email}</span></td><td className="p-4 font-semibold text-slate-700">{pedido.petshop.nome}</td><td className="p-4"><ServicosOrcamento servicosJson={pedido.servicosJson} /></td><td className="p-4 text-slate-500">{new Date(pedido.criadoEm).toLocaleString()}</td><td className="p-4"><OrcamentoStatus status={pedido.status} /></td><td className="p-4"><button type="button" onClick={() => setDetalhe(pedido)} className="rounded-xl border border-blue-200 px-3 py-2 text-sm font-bold text-blue-800 hover:bg-blue-50">Ver detalhes</button></td></tr>)}</tbody></table></div>}</section></div>{detalhe && <OrcamentoDetalhes pedido={detalhe} fechar={() => setDetalhe(null)} />}</main>;
 }

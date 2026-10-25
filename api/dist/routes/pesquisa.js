@@ -30,6 +30,7 @@ animais_1.default.get("/", async (req, res) => {
                 idade: true,
                 cidade: true,
                 urlImagem: true,
+                fotos: true,
             },
         });
         // 2️⃣ Filtra em memória usando normalização

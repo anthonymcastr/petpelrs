@@ -5,6 +5,8 @@ import { Compartilhar } from "./Compartilhar";
 import { Localizacao } from "./Localizacao";
 import { useClienteStore } from "../context/ClienteContext";
 import { useAdminStore } from "../Admin/context/AdminContext";
+import { GaleriaFotos } from "./GaleriaFotos";
+import { fotosDoAnimal } from "../utils/fotos";
 
 type CardAnimalProps = {
   data: Animal;
@@ -187,12 +189,7 @@ export function CardAnimal({
     <article className="group flex h-full flex-col overflow-hidden rounded-3xl bg-white shadow-[0_10px_30px_-12px_rgba(30,64,175,0.35)] ring-1 ring-slate-200/70 transition duration-300 hover:-translate-y-2 hover:shadow-[0_24px_45px_-15px_rgba(30,64,175,0.45)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
       {/* Imagem */}
       <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-        <img
-          src={data.urlImagem}
-          alt={data.nome}
-          loading="lazy"
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
-        />
+        <GaleriaFotos fotos={fotosDoAnimal(data)} alt={data.nome} />
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent" />
 
         <span

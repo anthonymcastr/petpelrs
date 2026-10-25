@@ -1,9 +1,13 @@
 import { useForm } from "react-hook-form";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Animal } from "../utils/animalType";
 import { useClienteStore } from "../context/ClienteContext";
+import { prepararFoto } from "../utils/imagem";
+
+const MAX_FOTOS = 6;
+type FotoItem = { id: string; file: File; url: string };
 
 const campo =
   "w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 transition focus:border-blue-700 focus:outline-2 focus:outline-offset-0 focus:outline-blue-200";
@@ -75,21 +79,21 @@ export default function Inclusao() {
   const navigate = useNavigate();
   const [alerta, setAlerta] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
-  const [imagemComErro, setImagemComErro] = useState(false);
+  const [fotos, setFotos] = useState<FotoItem[]>([]);
+  const [erroFoto, setErroFoto] = useState<string | null>(null);
+  const [processandoFoto, setProcessandoFoto] = useState(false);
+  const inputArquivo = useRef<HTMLInputElement>(null);
+  const fotosRef = useRef<FotoItem[]>([]);
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm<Animal>();
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const urlImagem = watch("urlImagem");
-  const urlValida = !!urlImagem && /^https?:\/\//.test(urlImagem);
-
   // 🔒 Preenche automaticamente o ID do usuário logado
   useEffect(() => {
     if (cliente?.id) {
@@ -97,24 +101,75 @@ export default function Inclusao() {
     }
   }, [cliente, setValue]);
 
-  // Zera o erro da prévia sempre que a URL muda
   useEffect(() => {
-    setImagemComErro(false);
-  }, [urlImagem]);
+    fotosRef.current = fotos;
+  }, [fotos]);
+
+  useEffect(() => () => fotosRef.current.forEach((foto) => URL.revokeObjectURL(foto.url)), []);
+
+  async function adicionarFotos(arquivos?: FileList | File[] | null) {
+    const lista = Array.from(arquivos ?? []);
+    if (!lista.length || processandoFoto) return;
+    const vagas = MAX_FOTOS - fotosRef.current.length;
+    if (vagas <= 0) return setErroFoto(`Você já adicionou o máximo de ${MAX_FOTOS} fotos.`);
+    setProcessandoFoto(true);
+    const avisos: string[] = [];
+    const novas: FotoItem[] = [];
+    for (const arquivo of lista.slice(0, vagas)) {
+      try {
+        const file = await prepararFoto(arquivo);
+        novas.push({ id: `${Date.now()}-${Math.random()}`, file, url: URL.createObjectURL(file) });
+      } catch (error) {
+        avisos.push(`${arquivo.name}: ${error instanceof Error ? error.message : "foto inválida"}`);
+      }
+    }
+    setFotos((atual) => [...atual, ...novas]);
+    setErroFoto(avisos.length ? avisos.join(" ") : null);
+    setProcessandoFoto(false);
+  }
+
+  function removerFoto(id: string) {
+    setFotos((atual) => {
+      const foto = atual.find((item) => item.id === id);
+      if (foto) URL.revokeObjectURL(foto.url);
+      return atual.filter((item) => item.id !== id);
+    });
+  }
+
+  function tornarCapa(id: string) {
+    setFotos((atual) => {
+      const capa = atual.find((item) => item.id === id);
+      return capa ? [capa, ...atual.filter((item) => item.id !== id)] : atual;
+    });
+  }
 
   function aguardar(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async function onSubmit(data: Animal) {
+    if (!fotos.length) {
+      setErroFoto("Envie pelo menos uma foto do animal");
+      return;
+    }
     const inicio = Date.now();
     setCarregando(true);
 
     try {
+      const formData = new FormData();
+      formData.append("tipo", data.tipo);
+      formData.append("nome", data.nome);
+      formData.append("raca", data.raca);
+      formData.append("idade", String(data.idade));
+      formData.append("cidade", data.cidade);
+      formData.append("usuarioId", String(data.usuarioId));
+      if (data.chip?.trim()) formData.append("chip", data.chip.trim());
+      if (data.endereco?.trim()) formData.append("endereco", data.endereco.trim());
+      fotos.forEach((foto) => formData.append("fotos", foto.file, foto.file.name));
+
       const resp = await fetch(`${API_URL}/animais`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: formData,
       });
 
       if (!resp.ok) {
@@ -138,6 +193,8 @@ export default function Inclusao() {
         duration: 4000,
       });
       reset();
+      fotos.forEach((foto) => URL.revokeObjectURL(foto.url));
+      setFotos([]);
       navigate("/"); // volta pra listagem (home)
     } catch (error) {
       console.error(error);
@@ -367,43 +424,45 @@ export default function Inclusao() {
             </div>
           </div>
 
-          {/* Coluna da foto */}
+          {/* Coluna das fotos */}
           <div className="md:col-span-2">
-            <Rotulo htmlFor="urlImagem">Link da foto</Rotulo>
+            <Rotulo>Fotos do animal</Rotulo>
             <input
-              id="urlImagem"
-              {...register("urlImagem", {
-                required: "URL obrigatória",
-                pattern: {
-                  value: /^https?:\/\//,
-                  message: "URL inválida",
-                },
-              })}
-              className={campo}
-              placeholder="https://..."
+              ref={inputArquivo}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="sr-only"
+              onChange={(event) => {
+                adicionarFotos(event.target.files);
+                event.target.value = "";
+              }}
             />
-            <Erro mensagem={errors.urlImagem?.message} />
 
-            <div className="mt-4 flex aspect-[4/3] items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
-              {urlValida && !imagemComErro ? (
-                <img
-                  src={urlImagem}
-                  alt="Prévia da foto do animal"
-                  onError={() => setImagemComErro(true)}
-                  className="h-full w-full object-cover"
-                />
+            <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-3">
+              {fotos.length === 0 ? (
+                <div className="flex aspect-[4/3] items-center justify-center px-6 text-center text-sm text-slate-500">
+                  {processandoFoto ? "Preparando as fotos..." : "Escolha uma ou mais fotos do animal."}
+                </div>
               ) : (
-                <p className="px-6 text-center text-sm text-slate-500">
-                  {imagemComErro
-                    ? "Não foi possível carregar essa imagem. Confira o link."
-                    : "A prévia da foto aparece aqui depois que você colar o link."}
-                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {fotos.map((foto, indice) => (
+                    <div key={foto.id} className="relative aspect-square overflow-hidden rounded-xl">
+                      <img src={foto.url} alt={`Foto ${indice + 1}`} className="h-full w-full object-cover" />
+                      {indice === 0 && <span className="absolute bottom-1 left-1 rounded-full bg-blue-900 px-2 py-0.5 text-[10px] font-semibold text-white">Capa</span>}
+                      {indice > 0 && <button type="button" onClick={() => tornarCapa(foto.id)} className="absolute bottom-1 left-1 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-semibold text-blue-900">Usar capa</button>}
+                      <button type="button" onClick={() => removerFoto(foto.id)} aria-label={`Remover foto ${indice + 1}`} className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-red-600">×</button>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
 
-            <p className="mt-3 text-xs text-slate-500">
-              São permitidas apenas fotos de animais.
-            </p>
+            <button type="button" onClick={() => inputArquivo.current?.click()} disabled={processandoFoto || carregando || fotos.length >= MAX_FOTOS} className="mt-3 w-full rounded-xl border border-blue-900 px-4 py-2.5 text-sm font-semibold text-blue-900 hover:bg-blue-900 hover:text-white disabled:opacity-60">
+              {fotos.length ? "Adicionar mais fotos" : "Escolher fotos"}
+            </button>
+            <Erro mensagem={erroFoto ?? undefined} />
+            <p className="mt-3 text-xs text-slate-500">{fotos.length} de {MAX_FOTOS} fotos. A primeira será a capa. As imagens são reduzidas antes do envio.</p>
           </div>
 
           {/* Rodapé do formulário */}

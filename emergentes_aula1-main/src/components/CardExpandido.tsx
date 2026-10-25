@@ -6,6 +6,8 @@ import { useClienteStore } from "../context/ClienteContext";
 import { ConfirmacaoExclusao } from "./ConfirmacaoExclusao";
 import { Compartilhar } from "./Compartilhar";
 import { Localizacao } from "./Localizacao";
+import { GaleriaFotos } from "./GaleriaFotos";
+import { fotosDoAnimal } from "../utils/fotos";
 
 type Props = {
   animal: AnimalComUsuario;
@@ -175,11 +177,7 @@ export function CardExpandido({ animal, onClose, onExcluido }: Props) {
         <div className="flex max-h-[92dvh] flex-col overflow-y-auto rounded-3xl bg-white shadow-2xl md:flex-row md:overflow-hidden">
           {/* Foto */}
           <div className="relative h-72 shrink-0 bg-slate-100 md:h-auto md:w-1/2">
-            <img
-              src={animal.urlImagem}
-              alt={animal.nome}
-              className="h-full w-full object-cover"
-            />
+            <GaleriaFotos fotos={fotosDoAnimal(animal)} alt={animal.nome} grande />
             <span
               className={`absolute left-4 top-4 rounded-full px-4 py-1.5 text-sm font-semibold text-white shadow ${tipo.badge}`}
             >

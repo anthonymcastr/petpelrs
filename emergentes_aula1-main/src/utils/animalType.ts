@@ -7,6 +7,7 @@ export type AnimalBase = {
   idade: number
   raca: string
   urlImagem: string
+  fotos?: string[]
   tipo: "ADOCAO" | "ENCONTRADO" | "PERDIDO"
   cidade: string
   usuarioId: number

@@ -31,6 +31,7 @@ router.get("/", async (req, res) => {
         idade: true,
         cidade: true,
         urlImagem: true,
+        fotos: true,
       },
     });
 
