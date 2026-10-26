@@ -50,7 +50,7 @@ router.post("/cadastro", async (req, res) => {
   try {
     const parseResult = clienteSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({ error: parseResult.error.errors.map(e => e.message).join(", ") })
+      return res.status(400).json({ error: parseResult.error.issues.map(e => e.message).join(", ") })
     }
 
 

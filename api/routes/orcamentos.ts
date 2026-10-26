@@ -29,7 +29,7 @@ function frontendUrl() {
 
 router.post("/", autentica, async (req: AuthRequest, res) => {
   const valida = pedidoSchema.safeParse(req.body)
-  if (!valida.success) return res.status(400).json({ erro: valida.error.errors[0].message })
+  if (!valida.success) return res.status(400).json({ erro: valida.error.issues[0].message })
   if (req.user?.role === "admin") return res.status(403).json({ erro: "Administradores não podem enviar orçamentos como cliente" })
 
   try {
@@ -115,7 +115,7 @@ router.get("/admin", autentica, async (req: AuthRequest, res) => {
 router.patch("/:id/status", autentica, async (req: AuthRequest, res) => {
   const id = Number(req.params.id)
   const valida = statusSchema.safeParse(req.body)
-  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Pedido inválido" : valida.error.errors[0].message })
+  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Pedido inválido" : valida.error.issues[0].message })
 
   try {
     const atual = await prisma.orcamento.findUnique({ where: { id }, include: { petshop: true, cliente: true } })
@@ -143,7 +143,7 @@ router.patch("/:id/status", autentica, async (req: AuthRequest, res) => {
 router.post("/:id/avaliacao", autentica, async (req: AuthRequest, res) => {
   const id = Number(req.params.id)
   const valida = avaliacaoSchema.safeParse(req.body)
-  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Pedido inválido" : valida.error.errors[0].message })
+  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Pedido inválido" : valida.error.issues[0].message })
 
   try {
     const pedido = await prisma.orcamento.findUnique({ where: { id } })
@@ -178,7 +178,7 @@ router.get("/responder/:token", async (req, res) => {
 
 router.patch("/responder/:token", async (req, res) => {
   const resposta = z.object({ resposta: z.string().trim().min(2).max(1000) }).safeParse(req.body)
-  if (!resposta.success) return res.status(400).json({ erro: resposta.error.errors[0].message })
+  if (!resposta.success) return res.status(400).json({ erro: resposta.error.issues[0].message })
 
   try {
     const orcamento = await prisma.orcamento.findUnique({ where: { token: req.params.token }, include: { petshop: true, cliente: true } })

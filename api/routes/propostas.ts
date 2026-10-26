@@ -29,7 +29,7 @@ router.post("/", async (req, res) => {
   const valida = contatoSchema.safeParse(req.body)
 
   if (!valida.success) {
-    return res.status(400).json({ erros: valida.error.errors })
+    return res.status(400).json({ erros: valida.error.issues })
   }
 
   const { mensagem, remetenteId, destinatarioId, animalId } = valida.data

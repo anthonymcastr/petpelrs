@@ -27,7 +27,7 @@ const animalSchema = z.object({
 
 // Devolve só o texto do primeiro erro (o front exibe esse texto na tela)
 function primeiroErro(erro: ZodError) {
-  return erro.errors[0]?.message ?? "Dados inválidos"
+  return erro.issues[0]?.message ?? "Dados inválidos"
 }
 
 // ========================
