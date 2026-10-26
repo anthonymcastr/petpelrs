@@ -282,7 +282,7 @@ export default function Inclusao() {
               <legend className="mb-1.5 block text-sm font-medium text-slate-700">
                 O que aconteceu? <span className="text-red-500">*</span>
               </legend>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-3 sm:gap-3">
                 {TIPOS.map((t) => (
                   <label key={t.valor} className="cursor-pointer">
                     <input
@@ -294,8 +294,8 @@ export default function Inclusao() {
                     <span
                       className={`flex h-full flex-col rounded-xl border border-slate-300 px-3 py-3 text-center text-slate-600 transition hover:bg-slate-50 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-700 ${t.marcado}`}
                     >
-                      <span className="font-semibold">{t.label}</span>
-                      <span className="text-xs opacity-80">{t.descricao}</span>
+                      <span className="text-sm font-semibold sm:text-base">{t.label}</span>
+                      <span className="text-[11px] leading-tight opacity-80 sm:text-xs">{t.descricao}</span>
                     </span>
                   </label>
                 ))}
