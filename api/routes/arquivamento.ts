@@ -34,9 +34,9 @@ router.post("/animais/:animalId", autentica, async (req: AuthRequest, res) => {
   if (!animalId || !valida.success) {
     console.warn("[arquivamento] Requisição inválida", {
       animalId,
-      erro: valida.success ? "Animal inválido" : valida.error.errors[0].message,
+      erro: valida.success ? "Animal inválido" : valida.error.issues[0].message,
     })
-    return res.status(400).json({ erro: valida.success ? "Animal inválido" : valida.error.errors[0].message })
+    return res.status(400).json({ erro: valida.success ? "Animal inválido" : valida.error.issues[0].message })
   }
 
   try {
@@ -121,7 +121,7 @@ router.patch("/admin/:id", autentica, somenteAdmin, async (req: AuthRequest, res
   const valida = decisaoSchema.safeParse(req.body)
 
   if (!id || !valida.success) {
-    return res.status(400).json({ erro: valida.success ? "Solicitação inválida" : valida.error.errors[0].message })
+    return res.status(400).json({ erro: valida.success ? "Solicitação inválida" : valida.error.issues[0].message })
   }
 
   try {

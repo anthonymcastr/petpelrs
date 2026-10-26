@@ -84,7 +84,7 @@ function semSenha<T extends { senha?: string | null }>(petshop: T) {
 // ========================
 router.post("/cadastro", receberLogo, async (req, res) => {
   const valida = cadastroSchema.safeParse(req.body)
-  if (!valida.success) return res.status(400).json({ erro: valida.error.errors[0].message })
+  if (!valida.success) return res.status(400).json({ erro: valida.error.issues[0].message })
 
   try {
     const { senha, confirmarSenha: _confirmarSenha, ...dados } = valida.data
@@ -123,7 +123,7 @@ router.get("/admin", autentica, somenteAdmin, async (_req, res) => {
 
 router.post("/admin", autentica, somenteAdmin, async (req, res) => {
   const valida = adminPetshopSchema.safeParse(req.body)
-  if (!valida.success) return res.status(400).json({ erro: valida.error.errors[0].message })
+  if (!valida.success) return res.status(400).json({ erro: valida.error.issues[0].message })
 
   try {
     const { senha, confirmarSenha: _confirmarSenha, ...dados } = valida.data
@@ -138,7 +138,7 @@ router.post("/admin", autentica, somenteAdmin, async (req, res) => {
 router.put("/admin/:id", autentica, somenteAdmin, async (req, res) => {
   const id = Number(req.params.id)
   const valida = adminPetshopSchema.safeParse(req.body)
-  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Petshop inválida" : valida.error.errors[0].message })
+  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Petshop inválida" : valida.error.issues[0].message })
 
   try {
     const { senha, confirmarSenha: _confirmarSenha, ...dados } = valida.data
@@ -167,7 +167,7 @@ router.patch("/admin/:id/status", autentica, somenteAdmin, async (req, res) => {
 router.post("/admin/:id/servicos", autentica, somenteAdmin, async (req, res) => {
   const petshopId = Number(req.params.id)
   const valida = servicoSchema.safeParse(req.body)
-  if (!petshopId || !valida.success) return res.status(400).json({ erro: valida.success ? "Petshop inválida" : valida.error.errors[0].message })
+  if (!petshopId || !valida.success) return res.status(400).json({ erro: valida.success ? "Petshop inválida" : valida.error.issues[0].message })
 
   try {
     const servico = await prisma.servico.create({ data: { ...valida.data, petshopId } })
@@ -181,7 +181,7 @@ router.post("/admin/:id/servicos", autentica, somenteAdmin, async (req, res) => 
 router.put("/admin/servicos/:servicoId", autentica, somenteAdmin, async (req, res) => {
   const id = Number(req.params.servicoId)
   const valida = servicoSchema.safeParse(req.body)
-  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Serviço inválido" : valida.error.errors[0].message })
+  if (!id || !valida.success) return res.status(400).json({ erro: valida.success ? "Serviço inválido" : valida.error.issues[0].message })
 
   try {
     const servico = await prisma.servico.update({ where: { id }, data: valida.data })
